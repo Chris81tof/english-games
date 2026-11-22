@@ -5,7 +5,7 @@ EG.registerGame({
   id: 'hangman',
   name: 'Hangman',
   emoji: '🔤',
-  tagline: 'Guess the letters!',
+  get tagline() { return EG.t('tag.hangman'); },
   description: 'Rate das Wort Buchstabe für Buchstabe!',
   minWords: 5,
 
@@ -32,7 +32,7 @@ EG.registerGame({
       '<line x1="130" y1="125" x2="148" y2="160"/>',
     ];
     const gallows = (wrong) => {
-      const s = h('div', { class: 'gallows', role: 'img', 'aria-label': `${wrong} von ${LIVES} Fehlern` });
+      const s = h('div', { class: 'gallows', role: 'img', 'aria-label': EG.t('hm.mistakes', { w: wrong, n: LIVES }) });
       s.innerHTML = `<svg viewBox="0 0 180 200" fill="none" stroke="#1e1b3a" stroke-width="6" stroke-linecap="round">${PARTS.slice(0, wrong).join('')}</svg>`;
       return s;
     };
@@ -48,7 +48,7 @@ EG.registerGame({
 
       const hints = [];
       if (w.level <= 2 && w.emoji) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, w.emoji));
-      if (w.level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + w.de));
+      if (w.level === 1) hints.push(h('div', { class: 'hint-de' }, '💬 ' + EG.gloss(w)));
 
       const wordEl = h('div', { class: 'hm-word', 'aria-live': 'polite' });
       const lives = h('div', { class: 'round-info' });
@@ -59,7 +59,7 @@ EG.registerGame({
       const kb = h('div', { class: 'keyboard' }, LETTERS.map((L) => (keys[L] = h('button', {
         class: 'key', type: 'button', onclick: () => guess(L) }, L))));
       const nextBtn = h('button', { class: 'btn btn-big', type: 'button', hidden: true,
-        onclick: () => { i++; i < deck.length ? showRound() : finish(); } }, '→ Weiter');
+        onclick: () => { i++; i < deck.length ? showRound() : finish(); } }, EG.t('cont'));
 
       const solved = () => [...word].every((ch) => !/[A-Z]/.test(ch) || used.has(ch));
 
@@ -67,8 +67,8 @@ EG.registerGame({
         wordEl.replaceChildren(...[...word].map((ch) => h('span', { class: 'hm-letter' + (ch === ' ' ? ' gap' : '') },
           !/[A-Z]/.test(ch) ? (ch === ' ' ? '' : ch) : (used.has(ch) || over ? ch : ''))));
         art.replaceChildren(gallows(wrong));
-        lives.textContent = `❤️ ${LIVES - wrong} Leben`;
-        turnEl.textContent = mode.id === 'class' ? '' : 'Dran: ' + side().sym + ' ' + side().name;
+        lives.textContent = EG.t('hm.lives', { n: LIVES - wrong });
+        turnEl.textContent = mode.id === 'class' ? '' : EG.t('turn', { sym: side().sym, name: side().name });
       }
       let over = false;
 
@@ -85,11 +85,11 @@ EG.registerGame({
         if (solved()) {
           over = true;
           if (mode.id === 'class') board.add('c', 1);
-          msg.textContent = '🎉 Gelöst!'; msg.classList.add('v-ok');
+          msg.textContent = EG.t('hm.solved'); msg.classList.add('v-ok');
           EG.sound('win'); EG.speak(w.en, true);
         } else if (wrong >= LIVES) {
           over = true;
-          msg.textContent = '😢 Das Wort war: ' + w.en; msg.classList.add('v-trick');
+          msg.textContent = EG.t('hm.was', { w: w.en }); msg.classList.add('v-trick');
           EG.speak(w.en, true);
         }
         if (over) { nextBtn.hidden = false; kb.classList.add('done'); }
@@ -98,8 +98,8 @@ EG.registerGame({
 
       paint();
       el.append(
-        h('div', { class: 'round-info' }, `Wort ${i + 1} / ${deck.length}`),
-        h('div', { class: 'hm-main' }, art, h('div', { class: 'hm-side' }, hints, wordEl, lives, turnEl, msg, EG.speakButton(w.en, 'Wort anhören'))),
+        h('div', { class: 'round-info' }, EG.t('hm.word', { i: i + 1, n: deck.length })),
+        h('div', { class: 'hm-main' }, art, h('div', { class: 'hm-side' }, hints, wordEl, lives, turnEl, msg, EG.speakButton(w.en, EG.t('hm.listen')))),
         kb, nextBtn);
     }
 
@@ -110,11 +110,11 @@ EG.registerGame({
           h('div', { class: 'end-emoji' }, '🏆'),
           h('h2', {}, EG.resultText(board)),
           h('div', { class: 'row' },
-            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, '↻ Nochmal'),
-            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, '☰ Spielauswahl'))));
+            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, EG.t('end.again')),
+            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, EG.t('end.menu')))));
     }
 
-    if (!deck.length) { el.append(h('p', {}, 'Keine Wörter in der Auswahl.')); return; }
+    if (!deck.length) { el.append(h('p', {}, EG.t('hm.none'))); return; }
     showRound();
   },
 });

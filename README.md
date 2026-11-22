@@ -27,3 +27,10 @@ Braucht ein Spiel Vokabeln, gib `minWords: n` an – bei weniger Wörtern zeigt 
 git add -A && git commit -m "Wortliste angepasst" && git push
 ```
 GitHub Pages veröffentlicht den neuen Stand nach etwa einer Minute.
+
+## Sprachen
+Oben rechts wählt der Globus die Sprache (Standard: Englisch, britisch). Sie gilt für alle Menütexte und Anweisungen; Texte, die nur die Lehrkraft sieht, bleiben Deutsch. Die Übersetzung in Wortliste und Spielen folgt der Sprache (bei Englisch: Deutsch). Fehlt eine Übersetzung, erscheint das deutsche Wort. Die App merkt sich die Sprache.
+- Menütexte: `data/i18n/ui-<sprache>.js`
+- Übersetzungen: `data/i18n/<sprache>.js`, je Eintrag `[Text, 0 = automatisch übersetzt | 1 = geprüft]`. Schlüssel: `unitId|englisch`, `cmd|…`, `cat|…`, `zip|…`.
+- Im Lehrkraft-Modus ist die Übersetzungsspalte bearbeitbar; 🤖 markiert automatisch übersetzte Einträge, eine bearbeitete Übersetzung gilt als geprüft.
+- Neue Unit: alle Sprachen mitübersetzen (`python3 tools/uebersetzung-schreiben.py <sprache> <datei.tsv>`, Zeilen `schlüssel<TAB>übersetzung`).

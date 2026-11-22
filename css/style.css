@@ -229,3 +229,30 @@ h2.step { font-family: var(--head); font-weight: 400; font-size: 2.2rem; margin:
 .pin-card .pin-form { flex-direction: row; justify-content: flex-start; flex-wrap: wrap; }
 .pin-input { width: 9rem; font-size: 2rem; text-align: center; letter-spacing: .4rem; }
 .dlg-msg { font-weight: 800; min-height: 1.5rem; }
+
+/* Sprachauswahl */
+.lang-wrap { position: relative; }
+.lang-btn { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .9rem; min-height: 3rem; font-size: 1rem; }
+.lang-btn > span:first-child { font-size: 1.4rem; line-height: 1; }
+.lang-list { position: absolute; top: calc(100% + .4rem); inset-inline-end: 0; z-index: 20; min-width: 17rem; max-height: 70vh; overflow-y: auto;
+  background: var(--white); border: var(--border); border-radius: 1rem; padding: .4rem; box-shadow: 0 .4rem 0 var(--ink); display: flex; flex-direction: column; }
+.lang-list button { display: grid; grid-template-columns: 1.4rem 1fr auto; align-items: center; gap: .6rem; text-align: start; border: 0; background: none;
+  padding: .55rem .7rem; border-radius: .6rem; font-size: 1.1rem; font-weight: 700; min-height: 2.8rem; }
+.lang-list button:hover, .lang-list button:focus-visible { background: var(--mustard-soft); }
+.lang-list button.on { background: var(--mustard-soft); }
+.lang-mark { font-weight: 800; }
+.lang-code { font-size: .8rem; font-weight: 800; letter-spacing: .05em; }
+.lang-list .lang-code { opacity: .7; }
+
+/* Übersetzung in der Wortliste (Lehrkraft) */
+.tr-cell { display: flex; align-items: center; gap: .4rem; }
+.auto-mark { font-size: 1rem; cursor: help; }
+
+/* Rechts-nach-links (Arabisch): Englisches bleibt links-nach-rechts */
+.wl-table th, .wl-table td, .settings th[scope=row], .say { text-align: start; }
+html[dir=rtl] .zip-given, html[dir=rtl] .hint-ctx, html[dir=rtl] .zip-ans-text, html[dir=rtl] .cmd,
+html[dir=rtl] .slap-card .word, html[dir=rtl] .hm-word, html[dir=rtl] .keyboard, html[dir=rtl] .oops-grid,
+html[dir=rtl] .say, html[dir=rtl] .clock { direction: ltr; unicode-bidi: isolate; }
+html[dir=rtl] .deco { right: auto; left: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 100%; }
+html[dir=rtl] .wl-table tr.changed td.wl-chg { border-left: 0; border-right: .35rem solid var(--ink); }
+html[dir=rtl] body { font-family: 'Nunito', 'Geeza Pro', 'Noto Naskh Arabic', 'Segoe UI', system-ui, sans-serif; }

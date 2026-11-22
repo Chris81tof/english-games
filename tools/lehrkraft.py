@@ -7,6 +7,7 @@ Start:  python3 tools/lehrkraft.py        (oder Doppelklick auf Lehrkraft-starte
 - In der Wortliste lassen sich Deutsch, Emoji und Niveau ändern; die Änderung wird sofort in
   data/units/*.js geschrieben. „Änderungen rückgängig“ nimmt die jeweils letzte Änderung zurück.
 - Als Änderung gilt alles, was vom letzten Git-Commit abweicht (✎ in der Wortliste).
+- Übersetzungen in andere Sprachen stehen in data/i18n/<sprache>.js; eine bearbeitete gilt als geprüft.
 - Die PIN für den Schüler-Modus wird als Hash in data/pin.js gespeichert.
 """
 import hashlib
@@ -24,6 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 UNITS = ROOT / 'data' / 'units'
 PIN_FILE = ROOT / 'data' / 'pin.js'
+I18N = ROOT / 'data' / 'i18n'
 HOST, PORT = '127.0.0.1', 8123
 FIELDS = ('de', 'emoji', 'level')
 
@@ -32,8 +34,10 @@ LINE = re.compile(
     r"^(?P<pre>\s*\{ en: )(?P<en>%s)(?P<mid>,\s*de:\s*)(?P<de>%s)(?P<mid2>,\s*emoji:\s*)(?P<emoji>%s)"
     r"(?P<mid3>,\s*level:\s*)(?P<level>\d)(?P<post>.*)$" % (STR, STR, STR))
 
+TR_LINE = re.compile(r'^\s*(?P<key>"(?:[^"\\]|\\.)*"): \[(?P<text>"(?:[^"\\]|\\.)*"), (?P<chk>[01])\],?\s*$')
+
 lock = threading.Lock()
-undo_stack = []          # {unit, en, before: {de, emoji, level}}
+undo_stack = []          # Wort: {kind: 'word', unit, en, before} · Übersetzung: {kind: 'tr', lang, key, before: [text, chk] | None}
 snapshot = {}            # Rückfall, falls kein Git: Dateistand beim Start
 
 
@@ -109,6 +113,78 @@ def set_word(unit, en, patch):
     return before, now
 
 
+# ---------- Übersetzungsdateien data/i18n/<lang>.js ----------
+def tr_file(lang):
+    if not re.fullmatch(r'[a-z]{2,3}', lang or '') or lang in ('de', 'en'):
+        raise ValueError('Unbekannte Sprache')
+    path = I18N / (lang + '.js')
+    if not path.exists():
+        raise ValueError('Keine Übersetzungsdatei für ' + lang)
+    return path
+
+
+def parse_tr(text):
+    out = {}
+    for line in text.split('\n'):
+        m = TR_LINE.match(line)
+        if m:
+            out[json.loads(m.group('key'))] = [json.loads(m.group('text')), int(m.group('chk'))]
+    return out
+
+
+def tr_line(key, val):
+    return '  %s: [%s, %d],' % (json.dumps(key, ensure_ascii=False), json.dumps(val[0], ensure_ascii=False), val[1])
+
+
+def set_tr(lang, key, val):
+    """Setzt (oder entfernt bei val=None) eine Übersetzung. Gibt (vorher, nachher) zurück."""
+    path = tr_file(lang)
+    lines = path.read_text(encoding='utf-8').split('\n')
+    idx = [i for i, l in enumerate(lines) if TR_LINE.match(l) and json.loads(TR_LINE.match(l).group('key')) == key]
+    before = None
+    if idx:
+        m = TR_LINE.match(lines[idx[0]])
+        before = [json.loads(m.group('text')), int(m.group('chk'))]
+        if val is None:
+            del lines[idx[0]]
+        else:
+            lines[idx[0]] = tr_line(key, val)
+    elif val is not None:
+        end = max(i for i, l in enumerate(lines) if l.startswith('});'))
+        lines.insert(end, tr_line(key, val))
+    write_atomic(path, '\n'.join(lines))
+    return before, val
+
+
+def tr_changes():
+    out = []
+    for path in sorted(I18N.glob('*.js')):
+        lang = path.stem
+        if lang.startswith('ui-'):
+            continue
+        cur = parse_tr(path.read_text(encoding='utf-8'))
+        base = None
+        try:
+            rel = path.relative_to(ROOT).as_posix()
+            res = subprocess.run(['git', 'show', 'HEAD:' + rel], cwd=str(ROOT), capture_output=True, text=True, timeout=10)
+            if res.returncode == 0:
+                base = parse_tr(res.stdout)
+        except Exception:
+            pass
+        if base is None:
+            base = parse_tr(snapshot.get(path, ''))
+        for key in set(cur) | set(base):
+            if cur.get(key) != base.get(key):
+                out.append({'lang': lang, 'key': key, 'original': base.get(key), 'current': cur.get(key)})
+    return out
+
+
+def clean_text(v, what):
+    if not isinstance(v, str) or not v.strip() or len(v) > 200 or re.search('[\x00-\x1f\u2028\u2029]', v):
+        raise ValueError('Ungültiger Text für ' + what)
+    return v.strip()
+
+
 def clean_patch(data):
     patch = {}
     for f in FIELDS:
@@ -119,9 +195,7 @@ def clean_patch(data):
             if isinstance(v, bool) or v not in (1, 2, 3):
                 raise ValueError('Niveau muss 1, 2 oder 3 sein')
         else:
-            if not isinstance(v, str) or not v.strip() or len(v) > 200 or re.search('[\x00-\x1f  ]', v):
-                raise ValueError('Ungültiger Text für ' + f)
-            v = v.strip()
+            v = clean_text(v, f)
         patch[f] = v
     if not patch:
         raise ValueError('Keine Änderung')
@@ -184,7 +258,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(200, {'teacher': True})
         if path == '/api/changes':
             with lock:
-                return self.send_json(200, {'changes': changes(), 'undo': len(undo_stack)})
+                return self.send_json(200, {'changes': changes(), 'translations': tr_changes(), 'undo': len(undo_stack)})
         if any(part.startswith('.') for part in path.split('/') if part):
             return self.send_json(404, {'error': 'nicht gefunden'})   # .git usw. nie ausliefern
         return super().do_GET()
@@ -203,15 +277,27 @@ class Handler(SimpleHTTPRequestHandler):
                     patch = clean_patch(data)
                     before, now = set_word(str(data.get('unit')), str(data.get('en')), patch)
                     if before != now:
-                        undo_stack.append({'unit': str(data['unit']), 'en': str(data['en']), 'before': before})
+                        undo_stack.append({'kind': 'word', 'unit': str(data['unit']), 'en': str(data['en']), 'before': before})
                     return self.send_json(200, {'ok': True, 'current': now, 'undo': len(undo_stack)})
                 if path == '/api/undo':
                     if not undo_stack:
                         raise ValueError('Nichts zum Rückgängigmachen')
                     last = undo_stack.pop()
+                    if last['kind'] == 'tr':
+                        _, now = set_tr(last['lang'], last['key'], last['before'])
+                        return self.send_json(200, {'ok': True, 'kind': 'tr', 'lang': last['lang'], 'key': last['key'],
+                                                    'current': now, 'undo': len(undo_stack)})
                     _, now = set_word(last['unit'], last['en'], last['before'])
-                    return self.send_json(200, {'ok': True, 'unit': last['unit'], 'en': last['en'], 'current': now,
-                                                'undo': len(undo_stack)})
+                    return self.send_json(200, {'ok': True, 'kind': 'word', 'unit': last['unit'], 'en': last['en'],
+                                                'current': now, 'undo': len(undo_stack)})
+                if path == '/api/translate':
+                    lang, key = str(data.get('lang')), str(data.get('key'))
+                    if '|' not in key or len(key) > 300:
+                        raise ValueError('Ungültiger Schlüssel')
+                    before, now = set_tr(lang, key, [clean_text(data.get('text'), 'Übersetzung'), 1])
+                    if before != now:
+                        undo_stack.append({'kind': 'tr', 'lang': lang, 'key': key, 'before': before})
+                    return self.send_json(200, {'ok': True, 'current': now, 'undo': len(undo_stack)})
                 if path == '/api/pin':
                     set_pin(str(data.get('pin', '')))
                     return self.send_json(200, {'ok': True})
@@ -221,7 +307,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    for p in unit_files().values():
+    for p in list(unit_files().values()) + sorted(I18N.glob('*.js')):
         snapshot[p] = p.read_text(encoding='utf-8')
     try:
         server = ThreadingHTTPServer((HOST, PORT), Handler)

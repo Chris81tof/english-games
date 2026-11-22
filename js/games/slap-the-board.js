@@ -6,7 +6,7 @@ EG.registerGame({
   id: 'slap-the-board',
   name: 'Slap the board',
   emoji: '👋',
-  tagline: 'Listen and slap it!',
+  get tagline() { return EG.t('tag.slap'); },
   description: 'Wort hören oder lesen – zuerst die richtige Karte antippen!',
   minWords: 6,
   modes: ['players', 'teams'],
@@ -41,11 +41,11 @@ EG.registerGame({
       const later = (fn, ms) => timers.push(setTimeout(() => { if (el.isConnected) fn(); }, ms));
       el.replaceChildren();
 
-      const prompt = h('div', { class: 'card slap-prompt', 'aria-live': 'polite' }, 'Bereit?');
+      const prompt = h('div', { class: 'card slap-prompt', 'aria-live': 'polite' }, EG.t('slap.ready'));
       const verdict = h('div', { class: 'verdict' });
       const nextBtn = h('button', { class: 'btn btn-big', type: 'button', hidden: true,
-        onclick: () => { i++; i < targets.length ? showRound() : finish(); } }, '→ Weiter');
-      const startBtn = h('button', { class: 'btn btn-big', type: 'button', onclick: countdown }, '▶ Los!');
+        onclick: () => { i++; i < targets.length ? showRound() : finish(); } }, EG.t('cont'));
+      const startBtn = h('button', { class: 'btn btn-big', type: 'button', onclick: countdown }, EG.t('slap.go'));
 
       const cardEls = {}; // sideId -> [{w, btn}]
       const halves = mode.sides.map((s, si) => {
@@ -85,7 +85,7 @@ EG.registerGame({
         if (!live || over || locked.has(s.id)) return;
         if (w === t) {
           board.add(s.id, 1); EG.sound('right');
-          verdict.textContent = `✓ ${s.sym} ${s.name} war zuerst: +1`;
+          verdict.textContent = EG.t('slap.first', { sym: s.sym, name: s.name });
           verdict.className = 'verdict v-ok';
           end();
         } else {
@@ -93,7 +93,7 @@ EG.registerGame({
           const mine = cardEls[s.id].find((c) => c.w === w).btn;
           mine.classList.add('wrong'); mine.append(h('span', { class: 'mark' }, '✗'));
           lock(s);
-          verdict.textContent = `✗ ${s.sym} ${s.name}: falsch, −1 (gesperrt)`;
+          verdict.textContent = EG.t('slap.wrong', { sym: s.sym, name: s.name });
           verdict.className = 'verdict v-trick';
           if (locked.size === mode.sides.length) end();
         }
@@ -106,15 +106,15 @@ EG.registerGame({
           wrap.hidden = false; live = true;
           prompt.classList.remove('big');
           prompt.replaceChildren(showDe
-            ? h('span', { class: 'slap-de' }, '🇩🇪 ' + t.de)
-            : h('span', { class: 'slap-de' }, '🔊 Listen!'),
-          EG.speakButton(t.en, 'Wort vorlesen'));
+            ? h('span', { class: 'slap-de' }, '💬 ' + EG.gloss(t))
+            : h('span', { class: 'slap-de' }, EG.t('slap.listen')),
+          EG.speakButton(t.en, EG.t('speakWord')));
           if (!showDe) EG.speak(t.en);
         }, 3 * 800);
       }
 
       el.append(
-        h('div', { class: 'round-info' }, `Runde ${i + 1} / ${targets.length}`),
+        h('div', { class: 'round-info' }, EG.t('round', { i: i + 1, n: targets.length })),
         prompt, startBtn, wrap, verdict, nextBtn);
     }
 
@@ -125,8 +125,8 @@ EG.registerGame({
           h('div', { class: 'end-emoji' }, '🏆'),
           h('h2', {}, EG.resultText(board)),
           h('div', { class: 'row' },
-            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, '↻ Nochmal'),
-            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, '☰ Spielauswahl'))));
+            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, EG.t('end.again')),
+            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, EG.t('end.menu')))));
     }
 
     showRound();

@@ -3,9 +3,9 @@
   const EG = (window.EG = {
     years: [5, 6, 7, 8, 9, 10],
     levels: [
-      { id: 1, name: 'N1', stars: '★', title: 'Einfach', desc: 'Mit Bild und deutschem Wort' },
-      { id: 2, name: 'N2', stars: '★★', title: 'Mittel', desc: 'Nur mit Bild' },
-      { id: 3, name: 'N3', stars: '★★★', title: 'Schwer', desc: 'Ohne Hilfen' },
+      { id: 1, name: 'N1', stars: '★', get title() { return EG.t('lvl1'); }, get desc() { return EG.t('lvl1d'); } },
+      { id: 2, name: 'N2', stars: '★★', get title() { return EG.t('lvl2'); }, get desc() { return EG.t('lvl2d'); } },
+      { id: 3, name: 'N3', stars: '★★★', get title() { return EG.t('lvl3'); }, get desc() { return EG.t('lvl3d'); } },
     ],
     games: [],
     units: [],
@@ -55,6 +55,8 @@
 
   EG.store = {
     isMuted: () => data.muted,
+    getLang: () => data.lang || 'en',
+    setLang(l) { data.lang = l; save(); },
     getSel: (year) => (data.sel && data.sel[year]) || null,
     setSel(year, sel) { (data.sel = data.sel || {})[year] = sel; save(); },
     setMuted(m) { data.muted = !!m; save(); },
@@ -110,29 +112,32 @@
     if (voice) u.voice = voice;
     speechSynthesis.speak(u);
   };
-  EG.speakButton = (text, label = 'Vorlesen') =>
+  EG.speakButton = (text, label = EG.t('speak')) =>
     h('button', { class: 'btn-icon', type: 'button', 'aria-label': label + ': ' + text, onclick: () => EG.speak(text) }, '🔊');
 
   // ---------- Spielmodi und Punktetafel ----------
   EG.modes = [
-    { id: 'class', name: 'Ganze Klasse', icon: '🏫', desc: 'Alle zusammen sammeln Punkte', sides: [{ id: 'c', name: 'Klasse', sym: '★' }] },
-    { id: 'players', name: '2 Spieler', icon: '🧑‍🤝‍🧑', desc: 'Zwei Kinder treten gegeneinander an', sides: [{ id: 'a', name: 'Spieler 1', sym: '●' }, { id: 'b', name: 'Spieler 2', sym: '■' }] },
-    { id: 'teams', name: '2 Teams', icon: '👥', desc: 'Zwei Teams sammeln Punkte', sides: [{ id: 'a', name: 'Team A', sym: '▲' }, { id: 'b', name: 'Team B', sym: '◆' }] },
+    { id: 'class', get name() { return EG.t('mode.class'); }, icon: '🏫', get desc() { return EG.t('mode.classD'); },
+      sides: [{ id: 'c', get name() { return EG.t('side.class'); }, sym: '★' }] },
+    { id: 'players', get name() { return EG.t('mode.players'); }, icon: '🧑‍🤝‍🧑', get desc() { return EG.t('mode.playersD'); },
+      sides: [{ id: 'a', get name() { return EG.t('side.p1'); }, sym: '●' }, { id: 'b', get name() { return EG.t('side.p2'); }, sym: '■' }] },
+    { id: 'teams', get name() { return EG.t('mode.teams'); }, icon: '👥', get desc() { return EG.t('mode.teamsD'); },
+      sides: [{ id: 'a', get name() { return EG.t('side.ta'); }, sym: '▲' }, { id: 'b', get name() { return EG.t('side.tb'); }, sym: '◆' }] },
   ];
 
   EG.createScoreboard = (mode) => {
     const scores = {};
     mode.sides.forEach((s) => (scores[s.id] = 0));
     const cells = {};
-    const el = h('div', { class: 'scoreboard', role: 'group', 'aria-label': 'Punkte' });
+    const el = h('div', { class: 'scoreboard', role: 'group', 'aria-label': EG.t('score.label') });
     mode.sides.forEach((s, i) => {
       const val = h('span', { class: 'score-val', 'aria-live': 'polite' }, '0');
       cells[s.id] = val;
       el.append(h('div', { class: 'score side-' + i },
         h('span', { class: 'score-name' }, s.sym + ' ' + s.name),
-        h('button', { class: 'btn-mini', type: 'button', 'aria-label': 'Ein Punkt weniger für ' + s.name, onclick: () => api.add(s.id, -1) }, '−'),
+        h('button', { class: 'btn-mini', type: 'button', 'aria-label': EG.t('score.minus', { name: s.name }), onclick: () => api.add(s.id, -1) }, '−'),
         val,
-        h('button', { class: 'btn-mini', type: 'button', 'aria-label': 'Ein Punkt mehr für ' + s.name, onclick: () => api.add(s.id, 1) }, '+'),
+        h('button', { class: 'btn-mini', type: 'button', 'aria-label': EG.t('score.plus', { name: s.name }), onclick: () => api.add(s.id, 1) }, '+'),
       ));
     });
     const api = {
@@ -153,13 +158,13 @@
     const wrap = h('div', { class: 'award' });
     if (mode.id === 'class') {
       wrap.append(
-        h('button', { class: 'btn btn-green', type: 'button', onclick: () => cb('c') }, '✓ Richtig  +1'),
-        h('button', { class: 'btn btn-plain', type: 'button', onclick: () => cb(null) }, '✗ Nicht gelöst'),
+        h('button', { class: 'btn btn-green', type: 'button', onclick: () => cb('c') }, EG.t('award.right')),
+        h('button', { class: 'btn btn-plain', type: 'button', onclick: () => cb(null) }, EG.t('award.notSolved')),
       );
     } else {
       mode.sides.forEach((s, i) => wrap.append(
-        h('button', { class: 'btn side-btn-' + i, type: 'button', onclick: () => cb(s.id) }, s.sym + ' Punkt für ' + s.name)));
-      wrap.append(h('button', { class: 'btn btn-plain', type: 'button', onclick: () => cb(null) }, '✗ Niemand'));
+        h('button', { class: 'btn side-btn-' + i, type: 'button', onclick: () => cb(s.id) }, EG.t('award.pointFor', { sym: s.sym, name: s.name }))));
+      wrap.append(h('button', { class: 'btn btn-plain', type: 'button', onclick: () => cb(null) }, EG.t('award.nobody')));
     }
     return wrap;
   };
@@ -167,10 +172,10 @@
   // Endergebnis als Text + Symbol (nicht nur Farbe)
   EG.resultText = (board) => {
     const all = board.all();
-    if (all.length === 1) return `Die Klasse hat ${all[0].points} Punkte!`;
+    if (all.length === 1) return EG.t('result.class', { n: all[0].points });
     const [a, b] = all;
-    if (a.points === b.points) return `Unentschieden! ${a.points} : ${b.points}`;
+    if (a.points === b.points) return EG.t('result.draw', { a: a.points, b: b.points });
     const w = a.points > b.points ? a : b;
-    return `${w.sym} ${w.name} gewinnt!  ${a.points} : ${b.points}`;
+    return EG.t('result.win', { sym: w.sym, name: w.name, a: a.points, b: b.points });
   };
 })();

@@ -4,7 +4,7 @@ EG.registerGame({
   id: 'one-two-oops',
   name: 'One, two, oops!',
   emoji: '🙊',
-  tagline: 'Count and say "oops"!',
+  get tagline() { return EG.t('tag.oops'); },
   description: 'Zählt reihum – bei goldenen Zahlen heißt es „Oops!“',
 
   mount(ctx) {
@@ -12,24 +12,24 @@ EG.registerGame({
     const h = EG.h;
     const cfg = { 1: { max: 30, ks: [5] }, 2: { max: 30, ks: [4] }, 3: { max: 50, ks: [3, 4] } }[maxLevel];
     const isOops = (n) => cfg.ks.some((k) => n % k === 0);
-    const rule = cfg.ks.length > 1 ? 'Vielfache von ' + cfg.ks.join(' und ') : 'Vielfache von ' + cfg.ks[0];
+    const rule = EG.t('oops.mult', { k: cfg.ks.join(EG.t('oops.and')) });
     let n = 1, turn = 0, best = 0;
 
     const cells = [];
-    const grid = h('div', { class: 'card oops-grid', role: 'list', 'aria-label': 'Zahlen 1 bis ' + cfg.max });
+    const grid = h('div', { class: 'card oops-grid', role: 'list', 'aria-label': EG.t('oops.grid', { n: cfg.max }) });
     for (let k = 1; k <= cfg.max; k++) {
       const c = h('span', { class: 'oops-cell' + (isOops(k) ? ' gold' : ''), role: 'listitem' }, String(k), isOops(k) ? h('small', {}, '🙊') : null);
       cells[k] = c; grid.append(c);
     }
     const big = h('div', { class: 'oops-big', 'aria-live': 'polite' });
     const who = h('div', { class: 'round-info' });
-    const info = h('div', { class: 'hint-line' }, `🙊 Goldene Zahlen = „Oops!“ sagen (${rule}).`);
+    const info = h('div', { class: 'hint-line' }, EG.t('oops.rule', { rule }));
 
     function sideNow() { return mode.sides[turn % mode.sides.length]; }
     function paint() {
       cells.forEach((c, k) => c && c.classList.toggle('now', k === n));
       big.textContent = n;
-      who.textContent = mode.id === 'class' ? 'Alle zusammen – höchste Zahl: ' + best : 'Dran: ' + sideNow().sym + ' ' + sideNow().name;
+      who.textContent = mode.id === 'class' ? EG.t('oops.best', { n: best }) : EG.t('turn', { sym: sideNow().sym, name: sideNow().name });
     }
 
     function ok() {
@@ -52,16 +52,16 @@ EG.registerGame({
       EG.sound('win');
       el.replaceChildren(h('div', { class: 'card end-card' },
         h('div', { class: 'end-emoji' }, '🏆'),
-        h('h2', {}, 'Geschafft bis ' + cfg.max + '! ' + EG.resultText(board)),
+        h('h2', {}, EG.t('oops.done', { n: cfg.max }) + EG.resultText(board)),
         h('div', { class: 'row' },
-          h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, '↻ Nochmal'),
-          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, '☰ Spielauswahl'))));
+          h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, EG.t('end.again')),
+          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, EG.t('end.menu')))));
     }
 
     el.append(info, grid, who, big,
       h('div', { class: 'award' },
-        h('button', { class: 'btn btn-green btn-big', type: 'button', onclick: ok }, '✓ Richtig – weiter'),
-        h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: mistake }, '✗ Fehler – von vorn')));
+        h('button', { class: 'btn btn-green btn-big', type: 'button', onclick: ok }, EG.t('oops.ok')),
+        h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: mistake }, EG.t('oops.fail'))));
     paint();
   },
 });

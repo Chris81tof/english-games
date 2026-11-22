@@ -5,7 +5,7 @@ EG.registerGame({
   id: 'zip-it',
   name: 'Zip it!',
   emoji: '🤐',
-  tagline: 'Kurz ↔ lang',
+  get tagline() { return EG.t('tag.zip'); },
   description: 'Eine Form erscheint – schreibe die andere!',
 
   mount(ctx) {
@@ -28,7 +28,7 @@ EG.registerGame({
 
       const hints = [];
       if (level <= 2 && c.emoji) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, c.emoji));
-      if (level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + c.de));
+      if (level === 1) hints.push(h('div', { class: 'hint-de' }, '💬 ' + EG.gloss(c)));
       if (level <= 2) hints.push(h('div', { class: 'hint-ctx' }, sentence(c, '___')));
 
       const reveal = h('div', { class: 'zip-answer', hidden: true, 'aria-live': 'polite' });
@@ -36,7 +36,7 @@ EG.registerGame({
       const showBtn = h('button', { class: 'btn btn-big', type: 'button', onclick: () => {
         EG.sound('click');
         reveal.hidden = false;
-        reveal.replaceChildren(h('span', { class: 'zip-ans-label' }, '✔ Lösung'), h('span', { class: 'zip-ans-text' }, answer), EG.speakButton(answer));
+        reveal.replaceChildren(h('span', { class: 'zip-ans-label' }, EG.t('zip.answer')), h('span', { class: 'zip-ans-text' }, answer), EG.speakButton(answer));
         award.hidden = false;
         award.append(EG.awardButtons(mode, (side) => {
           if (side) { board.add(side, 1); EG.sound('right'); } else EG.sound('wrong');
@@ -45,12 +45,12 @@ EG.registerGame({
         }));
         showBtn.hidden = true;
         EG.speak(answer, true);
-      } }, '👁 Lösung zeigen');
+      } }, EG.t('zip.show'));
 
       el.append(
-        h('div', { class: 'round-info' }, `Runde ${i + 1} / ${deck.length}`),
+        h('div', { class: 'round-info' }, EG.t('round', { i: i + 1, n: deck.length })),
         h('div', { class: 'card zip-card' },
-          h('div', { class: 'zip-task' }, toShort ? '✏️ Long form → write the SHORT form!' : '✏️ Short form → write the LONG form!'),
+          h('div', { class: 'zip-task' }, EG.t(toShort ? 'zip.toShort' : 'zip.toLong')),
           h('div', { class: 'zip-given' }, given, EG.speakButton(given)),
           h('div', { class: 'hints' }, hints),
           reveal,
@@ -66,12 +66,12 @@ EG.registerGame({
           h('div', { class: 'end-emoji' }, '🏆'),
           h('h2', {}, EG.resultText(board)),
           h('div', { class: 'row' },
-            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, '↻ Nochmal'),
-            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, '☰ Spielauswahl')),
+            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, EG.t('end.again')),
+            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, EG.t('end.menu'))),
         ));
     }
 
-    if (!deck.length) { el.append(h('p', {}, 'Keine Kurzformen für diesen Jahrgang hinterlegt.')); return; }
+    if (!deck.length) { el.append(h('p', {}, EG.t('zip.none'))); return; }
     showRound();
   },
 });

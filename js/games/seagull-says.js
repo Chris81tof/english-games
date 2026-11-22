@@ -4,7 +4,7 @@ EG.registerGame({
   id: 'seagull-says',
   name: 'Seagull says',
   emoji: '🐦',
-  tagline: 'Listen and do it!',
+  get tagline() { return EG.t('tag.seagull'); },
   description: 'Nur mit „Seagull says“ ausführen!',
 
   mount(ctx) {
@@ -29,8 +29,8 @@ EG.registerGame({
         EG.sound('click');
         solveBtn.hidden = true;
         verdict.textContent = trick
-          ? '🚫 Kein „Seagull says“ – wer stillgeblieben ist, hat Recht!'
-          : '✅ „Seagull says“ – wer mitgemacht hat, hat Recht!';
+          ? EG.t('sea.trick')
+          : EG.t('sea.ok');
         verdict.classList.add(trick ? 'v-trick' : 'v-ok');
         award.hidden = false;
         award.append(EG.awardButtons(mode, (side) => {
@@ -38,7 +38,7 @@ EG.registerGame({
           i++;
           i < deck.length ? showRound() : finish();
         }));
-      } }, '🔍 Auflösung');
+      } }, EG.t('sea.solve'));
 
       const showBtn = h('button', { class: 'btn btn-big', type: 'button', onclick: () => {
         EG.sound('click');
@@ -46,16 +46,16 @@ EG.registerGame({
         bubble.hidden = false;
         const hints = [];
         if (c.level <= 2 && c.emoji) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, c.emoji));
-        if (c.level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + c.de));
+        if (c.level === 1) hints.push(h('div', { class: 'hint-de' }, '💬 ' + EG.gloss(c)));
         bubble.replaceChildren(
           h('div', { class: 'cmd' }, trick ? c.text : [h('span', { class: 'says' }, '🐦 Seagull says: '), c.text], EG.speakButton(full)),
           h('div', { class: 'hints' }, hints));
         solveBtn.hidden = false;
         EG.speak(full, true);
-      } }, '▶ Nächster Befehl');
+      } }, EG.t('sea.next'));
 
       el.append(
-        h('div', { class: 'round-info' }, `Runde ${i + 1} / ${deck.length}`),
+        h('div', { class: 'round-info' }, EG.t('round', { i: i + 1, n: deck.length })),
         showBtn, bubble, solveBtn, verdict, award);
     }
 
@@ -66,11 +66,11 @@ EG.registerGame({
           h('div', { class: 'end-emoji' }, '🏆'),
           h('h2', {}, EG.resultText(board)),
           h('div', { class: 'row' },
-            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, '↻ Nochmal'),
-            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, '☰ Spielauswahl'))));
+            h('button', { class: 'btn btn-big', type: 'button', onclick: ctx.restart }, EG.t('end.again')),
+            h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, EG.t('end.menu')))));
     }
 
-    if (!deck.length) { el.append(h('p', {}, 'Keine Befehle für diesen Jahrgang hinterlegt.')); return; }
+    if (!deck.length) { el.append(h('p', {}, EG.t('sea.none'))); return; }
     showRound();
   },
 });

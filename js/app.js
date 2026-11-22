@@ -6,6 +6,7 @@
   const flow = { year: null, state: null, words: [], game: null };
   const PALETTE = ['c-mustard', 'c-blue', 'c-pink', 'c-red', 'c-green'];
   const pal = (i) => PALETTE[i % PALETTE.length];
+  let current = () => showYears(); // aktuelle Ansicht, wird beim Sprachwechsel neu gezeichnet
 
   // ---------- Auswahl: Daten ----------
   const unitsOf = (year) => EG.units.filter((u) => u.year === year);
@@ -47,17 +48,49 @@
     function paint() {
       const m = EG.store.isMuted();
       b.textContent = m ? '🔇' : '🔊';
-      b.setAttribute('aria-label', m ? 'Ton ist aus. Einschalten' : 'Ton ist an. Ausschalten');
-      b.title = m ? 'Ton ist aus' : 'Ton ist an';
+      b.setAttribute('aria-label', m ? EG.t('mute.off') : EG.t('mute.on'));
+      b.title = m ? EG.t('mute.offT') : EG.t('mute.onT');
     }
     return b;
   }
 
+  // Globus mit Kürzel der aktiven Sprache; Klick öffnet die Liste (jede Sprache in ihrer Schrift)
+  function langButton() {
+    const info = EG.langInfo();
+    let list = null;
+    const btn = h('button', { class: 'btn btn-plain lang-btn', type: 'button', 'aria-haspopup': 'true', 'aria-expanded': 'false',
+      'aria-label': EG.t('lang.choose') + ': ' + info.name, title: EG.t('lang.choose'), onclick: () => (list ? close() : open()) },
+      h('span', { 'aria-hidden': 'true' }, '🌐'), h('span', { class: 'lang-code' }, info.code));
+    const wrap = h('div', { class: 'lang-wrap' }, btn);
+    const outside = (e) => { if (!wrap.contains(e.target)) close(); };
+    const esc = (e) => { if (e.key === 'Escape') { close(); btn.focus(); } };
+    function close() {
+      if (!list) return;
+      list.remove(); list = null; btn.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', esc);
+    }
+    function open() {
+      list = h('div', { class: 'lang-list', role: 'menu', 'aria-label': EG.t('lang.choose') }, EG.availableLanguages().map((l) =>
+        h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(l.id === info.id), class: l.id === info.id ? 'on' : '',
+          lang: l.id === 'bhs' ? 'sh' : l.id, dir: l.dir || 'ltr', onclick: () => {
+            close();
+            if (l.id === info.id) return;
+            EG.store.setLang(l.id); EG.applyLang(); current();
+          } },
+          h('span', { class: 'lang-mark', 'aria-hidden': 'true' }, l.id === info.id ? '✓' : ''),
+          h('span', { class: 'lang-name' }, l.name), h('span', { class: 'lang-code' }, l.code))));
+      wrap.append(list); btn.setAttribute('aria-expanded', 'true');
+      document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', esc);
+      (list.querySelector('.on') || list.querySelector('button')).focus();
+    }
+    return wrap;
+  }
+
   function topbar({ title, back, extra }) {
     return h('header', { class: 'topbar' },
-      back ? h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { EG.sound('click'); back(); } }, '← Zurück') : h('span'),
+      back ? h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { EG.sound('click'); back(); } }, EG.t('back')) : h('span'),
       h('h1', {}, title),
-      h('div', { class: 'topbar-right' }, app.teacher ? h('span', { class: 'chip chip-teacher' }, '🧑‍🏫 Lehrkraft-Modus') : null, extra, muteButton(), settingsButton()),
+      h('div', { class: 'topbar-right' }, app.teacher ? h('span', { class: 'chip chip-teacher' }, '🧑‍🏫 Lehrkraft-Modus') : null, extra, langButton(), muteButton(), settingsButton()),
     );
   }
 
@@ -70,13 +103,13 @@
 
   function crumbs() {
     const parts = [];
-    if (flow.year) parts.push('📚 Jahrgang ' + flow.year);
+    if (flow.year) parts.push(EG.t('crumb.class', { n: flow.year }));
     if (flow.state) {
       const ids = Object.keys(flow.state.units);
       const secs = ids.reduce((n, id) => n + flow.state.units[id].length, 0);
-      parts.push(`🔖 ${ids.length} Unit(s) · ${secs} Abschnitt(e)`);
+      parts.push(EG.t('crumb.units', { u: ids.length, s: secs }));
       parts.push('★ ' + levelsLabel(flow.state.levels));
-      parts.push(`🔤 ${flow.words.length} Wörter`);
+      parts.push(EG.t('crumb.words', { n: flow.words.length }));
     }
     return h('div', { class: 'crumbs' }, parts.map((p) => h('span', { class: 'chip' }, p)));
   }
@@ -99,18 +132,20 @@
 
   // 1) Jahrgang
   function showYears() {
+    current = showYears;
     Object.assign(flow, { year: null, state: null, words: [], game: null });
     screen(
       topbar({ title: 'English Games' }),
-      h('h2', { class: 'step' }, 'Welcher Jahrgang?'),
+      h('h2', { class: 'step' }, EG.t('whichClass')),
       h('div', { class: 'grid grid-3' }, EG.years.map((y, i) =>
-        tile({ cls: pal(i), icon: String(y), title: 'Klasse ' + y,
-          sub: unitsOf(y).length + ' Unit(s)', onclick: () => { flow.year = y; flow.state = loadState(y); showSelect(); } }))),
+        tile({ cls: pal(i), icon: String(y), title: EG.t('classN', { n: y }),
+          sub: EG.t('unitsN', { n: unitsOf(y).length }), onclick: () => { flow.year = y; flow.state = loadState(y); showSelect(); } }))),
     );
   }
 
   // 2) Auswahl: Units, Abschnitte, Niveaus
   function showSelect() {
+    current = showSelect;
     const year = flow.year;
     const units = unitsOf(year);
     const state = flow.state;
@@ -123,13 +158,13 @@
       flow.words = wordsFor(year, state);
 
       const levelRow = h('div', { class: 'card' },
-        h('h2', { class: 'step' }, '★ Niveaus'),
+        h('h2', { class: 'step' }, EG.t('select.levels')),
         h('div', { class: 'opts' }, EG.levels.map((l) => opt(state.levels.includes(l.id), `${l.stars} ${l.name} · ${l.title}`, (on) => {
           const set = new Set(state.levels); on ? set.add(l.id) : set.delete(l.id);
           if (set.size) state.levels = [...set].sort(); // mindestens ein Niveau bleibt gewählt
           commit();
         }))),
-        h('p', { class: 'hint-line' }, 'Die Hilfen (Emoji, Deutsch) richten sich nach dem Niveau des einzelnen Wortes.'));
+        h('p', { class: 'hint-line' }, EG.t('select.levelHint')));
 
       const unitCards = units.map((u) => {
         const secs = sectionsOf(u);
@@ -141,7 +176,7 @@
               if (on) state.units[u.id] = secs.map((s) => s.id); else delete state.units[u.id];
               commit();
             }, 'opt-unit'),
-            h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { EG.sound('click'); state.units[u.id] = secs.map((s) => s.id); commit(); } }, 'alle')),
+            h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { EG.sound('click'); state.units[u.id] = secs.map((s) => s.id); commit(); } }, EG.t('select.all'))),
           chosen && u.sections ? h('div', { class: 'opts sections' }, secs.map((s) =>
             opt(chosen.includes(s.id), `${s.name} (${countIn(s.id)})`, (on) => {
               const set = new Set(chosen); on ? set.add(s.id) : set.delete(s.id);
@@ -151,19 +186,19 @@
       });
 
       body.replaceChildren(
-        h('h2', { class: 'step' }, '📖 Units und Abschnitte'),
-        ...(units.length ? unitCards : [h('p', { class: 'empty card' }, '📭 Für diesen Jahrgang gibt es noch keine Units. Lege eine Datei in data/units/ an.')]),
+        h('h2', { class: 'step' }, EG.t('select.units')),
+        ...(units.length ? unitCards : [h('p', { class: 'empty card' }, EG.t('select.noUnits'))]),
         levelRow);
 
       const n = flow.words.length;
       foot.replaceChildren(
-        h('span', { class: 'foot-count' }, n ? `🔤 ${n} Wörter ausgewählt` : '⚠️ Keine Wörter ausgewählt – bitte Unit und Niveau ankreuzen.'),
+        h('span', { class: 'foot-count' }, n ? EG.t('select.count', { n }) : EG.t('select.none')),
         h('div', { class: 'foot-btns' },
-          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: () => { EG.sound('click'); showWords(); } }, '📋 Wörter ansehen'),
-          h('button', { class: 'btn btn-big', type: 'button', onclick: () => { EG.sound('click'); showGames(); } }, 'Weiter →')));
+          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: () => { EG.sound('click'); showWords(); } }, EG.t('select.viewWords')),
+          h('button', { class: 'btn btn-big', type: 'button', onclick: () => { EG.sound('click'); showGames(); } }, EG.t('next'))));
     }
 
-    screen(topbar({ title: 'Auswahl', back: showYears }), h('div', { class: 'crumbs' }, h('span', { class: 'chip' }, '📚 Jahrgang ' + year)), body, foot);
+    screen(topbar({ title: EG.t('select.title'), back: showYears }), h('div', { class: 'crumbs' }, h('span', { class: 'chip' }, EG.t('crumb.class', { n: year }))), body, foot);
     render();
   }
 
@@ -175,7 +210,16 @@
     .then((r) => r.json().catch(() => ({})).then((j) => { if (!r.ok || j.error) throw new Error(j.error || 'Fehler ' + r.status); return j; }));
   const FIELDS = ['de', 'emoji', 'level'];
   const findWord = (unitId, en) => { const u = EG.units.find((x) => x.id === unitId); return u && u.words.find((w) => w.en === en); };
-  const isChanged = (w) => !!w._orig && FIELDS.some((f) => w[f] !== w._orig[f]);
+  // Stand des letzten Commits für geänderte Übersetzungen: trOrig[lang][key] = [Text, geprüft] oder null (gab es nicht)
+  const trOrig = {};
+  const trCur = (lang, key) => (EG.translations[lang] || {})[key] || null;
+  const trChanged = (lang, key) => {
+    const o = (trOrig[lang] || {})[key];
+    return o !== undefined && JSON.stringify(o) !== JSON.stringify(trCur(lang, key));
+  };
+  const isChanged = (w, lang = EG.contentLang()) => (!!w._orig && FIELDS.some((f) => w[f] !== w._orig[f])) || (lang !== 'de' && trChanged(lang, w._key));
+  const changeCount = () => EG.units.reduce((sum, u) => sum + u.words.filter((w) => w._orig && FIELDS.some((f) => w[f] !== w._orig[f])).length, 0)
+    + Object.keys(trOrig).reduce((sum, l) => sum + Object.keys(trOrig[l]).filter((k) => trChanged(l, k)).length, 0);
 
   async function detectMode() {
     EG.units.forEach((u) => u.words.forEach((w) => { w._orig = { de: w.de, emoji: w.emoji, level: w.level }; }));
@@ -184,6 +228,7 @@
       if (!r.ok || !(await r.json()).teacher) return;
       const c = await api('/api/changes');
       c.changes.forEach((ch) => { const w = findWord(ch.unit, ch.en); if (w) w._orig = ch.original; }); // Stand des letzten Commits
+      (c.translations || []).forEach((t) => { (trOrig[t.lang] = trOrig[t.lang] || {})[t.key] = t.original; });
       app.teacher = true; app.undo = c.undo;
     } catch (e) { /* kein lokaler Server: Schüler-Modus */ }
   }
@@ -226,7 +271,7 @@
   function settingsButton() {
     if (app.teacher) return h('button', { class: 'btn-icon', type: 'button', 'aria-label': 'Einstellungen', title: 'Einstellungen', onclick: showSettings }, '⚙️');
     let taps = [];
-    return h('button', { class: 'btn-icon', type: 'button', 'aria-label': 'Gesperrt', title: 'Gesperrt', onclick: () => {
+    return h('button', { class: 'btn-icon', type: 'button', 'aria-label': EG.t('locked'), title: EG.t('locked'), onclick: () => {
       const now = Date.now();
       taps = taps.filter((t) => now - t < 3000).concat(now);
       if (taps.length >= 5) { taps = []; askPin(); }
@@ -234,9 +279,12 @@
   }
 
   // Wortliste: alle ausgewählten Wörter als Tabelle, filter- und sortierbar.
-  // Lehrkraft-Modus: Deutsch, Emoji und Niveau direkt änderbar (wird sofort in die Vokabeldatei geschrieben).
+  // Übersetzungsspalte in der Inhaltssprache (Englisch als Menüsprache → Deutsch).
+  // Lehrkraft-Modus: Übersetzung, Emoji und Niveau direkt änderbar (wird sofort in die Dateien geschrieben).
   function showWords() {
+    current = showWords;
     const editable = app.teacher;
+    const L = EG.contentLang();
     const all = flow.words.map((w, idx) => {
       const unit = EG.units.find((u) => u.id === w.unitId);
       const secs = unit.sections || [];
@@ -244,6 +292,7 @@
       return { ...w, idx, unitTitle: unit.title, secName: sec ? sec.name : '–', secIdx: sec ? secs.indexOf(sec) : 0,
         unitIdx: EG.units.indexOf(unit) };
     });
+    const glossOf = (w) => EG.glossInfo(findWord(w.unitId, w.en));
     const f = { level: '', unit: '', section: '' };
     let sort = { key: null, dir: 1 };
     const body = h('div', { class: 'wl' });
@@ -255,10 +304,15 @@
     const undoBtn = h('button', { class: 'btn', type: 'button', onclick: async () => {
       try {
         const res = await api('/api/undo', {});
-        const src = findWord(res.unit, res.en);
-        Object.assign(src, res.current);
-        const row = all.find((r) => r.unitId === res.unit && r.en === res.en);
-        if (row) Object.assign(row, res.current);
+        if (res.kind === 'tr') {
+          const map = EG.translations[res.lang] = EG.translations[res.lang] || {};
+          if (res.current) map[res.key] = res.current; else delete map[res.key];
+        } else {
+          const src = findWord(res.unit, res.en);
+          Object.assign(src, res.current);
+          const row = all.find((r) => r.unitId === res.unit && r.en === res.en);
+          if (row) Object.assign(row, res.current);
+        }
         app.undo = res.undo; errEl.hidden = true; EG.sound('click'); render();
       } catch (e) { fail(e); }
     } }, '↶ Änderungen rückgängig');
@@ -266,67 +320,89 @@
 
     const COLS = [
       editable && { key: 'chg', label: '✎', nosort: true, title: 'Geändert' },
-      { key: 'en', label: 'Englisch' }, { key: 'de', label: 'Deutsch' }, { key: 'emoji', label: 'Emoji' },
-      { key: 'level', label: 'Niveau' }, { key: 'unitIdx', label: 'Unit' }, { key: 'secIdx', label: 'Abschnitt' },
+      { key: 'en', label: EG.t('col.en') }, { key: 'tr', label: EG.t('transName') }, { key: 'emoji', label: EG.t('col.emoji') },
+      { key: 'level', label: EG.t('col.level') }, { key: 'unitIdx', label: EG.t('col.unit') }, { key: 'secIdx', label: EG.t('col.section') },
     ].filter(Boolean);
     const cmp = (a, b) => {
       const k = sort.key;
-      const r = (k === 'en' || k === 'de') ? a[k].localeCompare(b[k], k === 'de' ? 'de' : 'en', { sensitivity: 'base' })
+      const r = k === 'en' ? a.en.localeCompare(b.en, 'en', { sensitivity: 'base' })
+        : k === 'tr' ? glossOf(a).text.localeCompare(glossOf(b).text, L === 'bhs' ? 'hr' : L, { sensitivity: 'base' })
         : k === 'emoji' ? String(a[k]).localeCompare(String(b[k])) : a[k] - b[k];
       return r || a.idx - b.idx; // bei Gleichstand: Reihenfolge der Datei
     };
 
     function select(label, value, options, onchange) {
       const sel = h('select', { onchange: (e) => { onchange(e.target.value); render(); } },
-        h('option', { value: '' }, 'alle'), options.map((o) => h('option', { value: o.value }, o.label)));
+        h('option', { value: '' }, EG.t('select.all')), options.map((o) => h('option', { value: o.value }, o.label)));
       sel.value = value;
       return h('label', { class: 'filter' }, h('span', {}, label), sel);
     }
 
     function refreshMeta() {
-      const n = EG.units.reduce((sum, u) => sum + u.words.filter(isChanged).length, 0);
-      metaEl.textContent = `🔤 ${all.length} Wörter ausgewählt` + (editable && n ? ` · ✎ ${n} geändert (noch nicht veröffentlicht)` : '');
+      const n = editable ? changeCount() : 0;
+      metaEl.textContent = EG.t('select.count', { n: all.length }) + (n ? ` · ✎ ${n} geändert (noch nicht veröffentlicht)` : '');
       undoBtn.disabled = !app.undo;
     }
+
+    const sayBtn = (w) => h('button', { class: 'say', type: 'button', dir: 'ltr', 'aria-label': EG.t('readAloud', { w: w.en }), onclick: () => EG.speak(w.en) },
+      h('span', { 'aria-hidden': 'true' }, '🔊 '), w.en);
 
     function rowEl(w) {
       const src = findWord(w.unitId, w.en);
       if (!editable) {
         return h('tr', {},
-          h('td', {}, h('button', { class: 'say', type: 'button', 'aria-label': 'Vorlesen: ' + w.en, onclick: () => EG.speak(w.en) },
-            h('span', { 'aria-hidden': 'true' }, '🔊 '), w.en)),
-          h('td', {}, w.de), h('td', { class: 'wl-emoji' }, w.emoji),
+          h('td', {}, sayBtn(w)),
+          h('td', {}, glossOf(w).text), h('td', { class: 'wl-emoji' }, w.emoji),
           h('td', {}, h('span', { class: 'lvl lvl-' + w.level }, 'N' + w.level)),
           h('td', {}, w.unitTitle), h('td', {}, w.secName));
       }
       const mark = h('td', { class: 'wl-chg' });
+      const auto = h('span', { class: 'auto-mark', title: 'automatisch übersetzt', 'aria-label': 'automatisch übersetzt' }, '🤖');
       const tr = h('tr', {}, mark);
       const refresh = () => {
-        const ch = isChanged(src);
+        const ch = isChanged(src, L);
         tr.classList.toggle('changed', ch);
         mark.textContent = ch ? '✎' : '';
         mark.title = ch ? 'Geändert' : '';
         mark.setAttribute('aria-label', ch ? 'Geändert' : '');
+        auto.hidden = !glossOf(w).auto;
       };
       const save = async (field, value, revert) => {
-        if (value === src[field]) return;
         try {
-          const res = await api('/api/edit', { unit: w.unitId, en: w.en, [field]: value });
-          Object.assign(src, res.current); Object.assign(w, res.current);
-          app.undo = res.undo; errEl.hidden = true;
-          refresh(); refreshMeta();
+          if (field === 'tr') {
+            const prev = trCur(L, src._key);
+            const res = await api('/api/translate', { lang: L, key: src._key, text: value });
+            const base = trOrig[L] = trOrig[L] || {};
+            if (base[src._key] === undefined) base[src._key] = prev; // erster Stand dieser Sitzung = letzter Commit
+            (EG.translations[L] = EG.translations[L] || {})[src._key] = res.current;
+            app.undo = res.undo;
+          } else {
+            if (value === src[field]) return;
+            const res = await api('/api/edit', { unit: w.unitId, en: w.en, [field]: value });
+            Object.assign(src, res.current); Object.assign(w, res.current);
+            app.undo = res.undo;
+          }
+          errEl.hidden = true; refresh(); refreshMeta();
         } catch (e) { revert(); fail(e); }
       };
-      const text = (field, cls, label) => {
+      const input = (cls, label, value, onSave) => {
         const inp = h('input', { class: 'edit ' + cls, type: 'text', 'aria-label': `${label} zu ${w.en}`, autocomplete: 'off', spellcheck: 'false' });
-        inp.value = w[field];
+        inp.value = value();
         inp.addEventListener('change', () => {
           const v = inp.value.trim();
-          if (!v) { inp.value = src[field]; return; }      // leer geht nicht: Wert bleibt
-          save(field, v, () => (inp.value = src[field]));
+          if (!v) { inp.value = value(); return; }      // leer geht nicht: Wert bleibt
+          onSave(v, () => (inp.value = value()));
         });
         return inp;
       };
+      // Deutsch steht in der Unit-Datei, alle anderen Sprachen in data/i18n/<lang>.js (bearbeitet = geprüft)
+      const trInput = L === 'de'
+        ? input('edit-de', 'Deutsch', () => src.de, (v, rv) => save('de', v, rv))
+        : input('edit-de', EG.t('transName'), () => glossOf(w).text, (v, rv) => {
+          const cur = trCur(L, src._key);
+          if (cur && cur[0] === v && cur[1]) return;
+          save('tr', v, rv);
+        });
       const lvl = h('select', { class: 'edit lvl-sel lvl-' + w.level, 'aria-label': 'Niveau zu ' + w.en },
         EG.levels.map((l) => h('option', { value: l.id }, l.name)));
       lvl.value = w.level;
@@ -336,10 +412,9 @@
       });
 
       tr.append(
-        h('td', {}, h('button', { class: 'say', type: 'button', 'aria-label': 'Vorlesen: ' + w.en, onclick: () => EG.speak(w.en) },
-          h('span', { 'aria-hidden': 'true' }, '🔊 '), w.en)),
-        h('td', {}, text('de', 'edit-de', 'Deutsch')),
-        h('td', {}, text('emoji', 'edit-emoji', 'Emoji')),
+        h('td', {}, sayBtn(w)),
+        h('td', {}, h('div', { class: 'tr-cell' }, trInput, auto)),
+        h('td', {}, input('edit-emoji', 'Emoji', () => src.emoji, (v, rv) => save('emoji', v, rv))),
         h('td', {}, lvl),
         h('td', {}, w.unitTitle),
         h('td', {}, w.secName));
@@ -373,49 +448,51 @@
       refreshMeta();
       tableBox.replaceChildren(rows.length
         ? h('table', { class: 'wl-table' }, h('thead', {}, head), h('tbody', {}, rows.map(rowEl)))
-        : h('p', { class: 'empty' }, 'Keine Wörter für diese Filter.'));
-      shown.textContent = rows.length !== all.length ? `${rows.length} von ${all.length} Wörtern angezeigt` : '';
+        : h('p', { class: 'empty' }, EG.t('wl.none')));
+      shown.textContent = rows.length !== all.length ? EG.t('wl.shown', { r: rows.length, n: all.length }) : '';
       filters.replaceChildren(
-        select('Niveau', f.level, flow.state.levels.slice().sort().map((l) => ({ value: String(l), label: 'N' + l })), (v) => (f.level = v)),
-        select('Unit', f.unit, unitOpts, (v) => (f.unit = v)),
-        select('Abschnitt', f.section, secOpts, (v) => (f.section = v)),
-        h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { f.level = f.unit = f.section = ''; sort = { key: null, dir: 1 }; render(); } }, '↺ Filter zurücksetzen'));
+        select(EG.t('col.level'), f.level, flow.state.levels.slice().sort().map((l) => ({ value: String(l), label: 'N' + l })), (v) => (f.level = v)),
+        select(EG.t('col.unit'), f.unit, unitOpts, (v) => (f.unit = v)),
+        select(EG.t('col.section'), f.section, secOpts, (v) => (f.section = v)),
+        h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { f.level = f.unit = f.section = ''; sort = { key: null, dir: 1 }; render(); } }, EG.t('wl.reset')));
     }
 
     body.append(...[metaEl,
       editable
-        ? h('p', { class: 'hint-line' }, '✏️ Deutsch, Emoji und Niveau kannst du direkt ändern (Felder mit Rahmen). Englisch, Unit und Abschnitt sind gesperrt. Jede Änderung wird sofort in die Vokabeldatei geschrieben und gilt in allen Spielen. ✎ = noch nicht veröffentlicht.')
+        ? h('p', { class: 'hint-line', dir: 'ltr', lang: 'de' }, `✏️ Übersetzung (${EG.langInfo(L).name}), Emoji und Niveau kannst du direkt ändern (Felder mit Rahmen). Englisch, Unit und Abschnitt sind gesperrt. Jede Änderung wird sofort in die Dateien geschrieben und gilt in allen Spielen. ✎ = noch nicht veröffentlicht, 🤖 = automatisch übersetzt (eine bearbeitete Übersetzung gilt als geprüft).`)
         : null,
       editable ? h('div', { class: 'wl-filters' }, undoBtn) : null,
       errEl, filters, shown, tableBox].filter(Boolean));
 
-    screen(topbar({ title: '📋 Wortliste', back: showSelect }), crumbs(), body);
+    screen(topbar({ title: EG.t('wl.title'), back: showSelect }), crumbs(), body);
     render();
   }
 
   // 3) Spiel
   function showGames() {
+    current = showGames;
     flow.game = null;
     const games = EG.games.filter((g) => EG.store.isGameOn(flow.year, g.id));
     const n = flow.words.length;
     screen(
-      topbar({ title: 'Spiel wählen', back: showSelect }), crumbs(),
+      topbar({ title: EG.t('games.title'), back: showSelect }), crumbs(),
       games.length
         ? h('div', { class: 'grid grid-3' }, games.map((g, i) => {
             const few = g.minWords && n < g.minWords;
             return tile({ cls: few ? 'c-off' : pal(i), icon: g.emoji, title: g.name,
-              sub: few ? `⚠️ Zu wenige Wörter (${n} von mind. ${g.minWords}). Bitte mehr Units, Abschnitte oder Niveaus wählen.` : g.tagline,
+              sub: few ? EG.t('games.few', { n, m: g.minWords }) : g.tagline,
               disabled: few, onclick: () => { flow.game = g; showModes(); } });
           }))
-        : h('p', { class: 'empty card' }, '⚙️ Für diesen Jahrgang sind alle Spiele abgehakt. Bitte in den Einstellungen aktivieren.'),
+        : h('p', { class: 'empty card' }, EG.t('games.allOff')),
     );
   }
 
   // 4) Modus
   function showModes() {
+    current = showModes;
     screen(
       topbar({ title: flow.game.emoji + ' ' + flow.game.name, back: showGames }), crumbs(),
-      h('h2', { class: 'step' }, 'Wer spielt?'),
+      h('h2', { class: 'step' }, EG.t('modes.who')),
       h('div', { class: 'grid grid-3' }, EG.modes.filter((m) => !flow.game.modes || flow.game.modes.includes(m.id)).map((m, i) =>
         tile({ cls: pal(i + 1), icon: m.icon, title: m.name, sub: m.desc, onclick: () => play(m) }))),
     );
@@ -423,6 +500,7 @@
 
   // 5) Spielen
   function play(mode) {
+    current = () => play(mode); // Sprachwechsel im Spiel startet es neu
     const board = EG.createScoreboard(mode);
     const stage = h('main', { class: 'stage' });
     const levels = flow.state.levels;
@@ -467,6 +545,7 @@
 
   // Einstellungen: Spiele je Jahrgang an-/abhaken
   function showSettings() {
+    current = showSettings;
     const prev = { ...flow };
     const back = () => { Object.assign(flow, prev); showYears(); };
     screen(
@@ -491,5 +570,7 @@
     });
   }
 
+  EG.assignKeys();
+  EG.applyLang();
   detectMode().then(showYears);
 })();
