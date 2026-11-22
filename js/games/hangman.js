@@ -1,5 +1,5 @@
 // Hangman – Buchstaben raten, die Klasse (oder Spieler/Teams im Wechsel) rät gemeinsam.
-// Wörter aus der gewählten Unit. Hilfen: N1 Emoji + Deutsch, N2 Emoji, N3 keine.
+// Wörter aus der Auswahl. Hilfen nach dem Niveau des einzelnen Wortes: N1 Emoji + Deutsch, N2 Emoji, N3 keine.
 // Punkte: Klasse +1 pro gelöstem Wort; Spieler/Teams +1 pro richtig geratenem Buchstaben-Vorkommen (Wechsel nach jedem Tipp).
 EG.registerGame({
   id: 'hangman',
@@ -7,15 +7,16 @@ EG.registerGame({
   emoji: '🔤',
   tagline: 'Guess the letters!',
   description: 'Rate das Wort Buchstabe für Buchstabe!',
+  minWords: 5,
 
   mount(ctx) {
-    const { el, level, unit, mode, board } = ctx;
+    const { el, words, mode, board } = ctx;
     const h = EG.h;
     const LIVES = 8;
     const ROUNDS = 5;
     const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-    const pool = unit.words.filter((w) => (w.level || 1) <= level && /[a-z]/i.test(w.en));
+    const pool = words.filter((w) => /[a-z]/i.test(w.en));
     const deck = EG.shuffle(pool).slice(0, ROUNDS);
     let i = 0, turn = 0;
 
@@ -46,8 +47,8 @@ EG.registerGame({
       el.replaceChildren();
 
       const hints = [];
-      if (level <= 2 && w.emoji) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, w.emoji));
-      if (level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + w.de));
+      if (w.level <= 2 && w.emoji) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, w.emoji));
+      if (w.level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + w.de));
 
       const wordEl = h('div', { class: 'hm-word', 'aria-live': 'polite' });
       const lives = h('div', { class: 'round-info' });
@@ -113,7 +114,7 @@ EG.registerGame({
             h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: ctx.exit }, '☰ Spielauswahl'))));
     }
 
-    if (!deck.length) { el.append(h('p', {}, 'Keine Wörter für dieses Niveau in dieser Unit.')); return; }
+    if (!deck.length) { el.append(h('p', {}, 'Keine Wörter in der Auswahl.')); return; }
     showRound();
   },
 });

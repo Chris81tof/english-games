@@ -1,5 +1,5 @@
 // Give me 5 – Kategorie erscheint, 5 passende Wörter nennen, bevor die Zeit abläuft.
-// Hilfen je Niveau: N1 = Emoji + Deutsch, N2 = Emoji, N3 = keine. Zeit: N1 40 s, N2 30 s, N3 20 s.
+// Hilfen und Zeit je Niveau der Kategorie: N1 = Emoji + Deutsch, 40 s; N2 = Emoji, 30 s; N3 = keine, 20 s.
 EG.registerGame({
   id: 'give-me-5',
   name: 'Give me 5',
@@ -8,12 +8,12 @@ EG.registerGame({
   description: 'Kategorie erscheint – nenne 5 passende Wörter!',
 
   mount(ctx) {
-    const { el, year, level, mode, board } = ctx;
+    const { el, year, maxLevel, mode, board } = ctx;
     const h = EG.h;
     const ROUNDS = 6;
-    const SECONDS = { 1: 40, 2: 30, 3: 20 }[level];
+    const SECONDS = { 1: 40, 2: 30, 3: 20 };
 
-    const pool = EG.categories.filter((c) => c.level <= level && (c.from || 5) <= year);
+    const pool = EG.categories.filter((c) => c.level <= maxLevel && (c.from || 5) <= year);
     const deck = EG.shuffle(pool).slice(0, ROUNDS);
     let i = 0, timer = null;
 
@@ -21,10 +21,11 @@ EG.registerGame({
       const c = deck[i];
       el.replaceChildren();
       const hints = [];
-      if (level <= 2) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, c.emoji));
-      if (level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + c.de));
+      if (c.level <= 2) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, c.emoji));
+      if (c.level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + c.de));
 
-      const clock = h('div', { class: 'clock', role: 'timer', 'aria-live': 'off' }, '⏱ ' + SECONDS);
+      const seconds = SECONDS[c.level];
+      const clock = h('div', { class: 'clock', role: 'timer', 'aria-live': 'off' }, '⏱ ' + seconds);
       const award = h('div', { hidden: true });
       const startBtn = h('button', { class: 'btn btn-big', type: 'button' }, '▶ Start');
 
@@ -42,7 +43,7 @@ EG.registerGame({
 
       startBtn.onclick = () => {
         EG.sound('click');
-        let left = SECONDS;
+        let left = seconds;
         startBtn.textContent = '✋ Fertig – Wörter prüfen';
         startBtn.onclick = toAward;
         timer = setInterval(() => {

@@ -1,5 +1,5 @@
 // One, two, oops! – Reihum zählen, bei goldenen Zahlen "Oops!" sagen.
-// Niveaus: N1 Vielfache von 5 bis 30, N2 Vielfache von 4 bis 30, N3 Vielfache von 3 oder 4 bis 50.
+// Niveaus (höchstes gewähltes zählt): N1 Vielfache von 5 bis 30, N2 Vielfache von 4 bis 30, N3 Vielfache von 3 oder 4 bis 50.
 EG.registerGame({
   id: 'one-two-oops',
   name: 'One, two, oops!',
@@ -8,9 +8,9 @@ EG.registerGame({
   description: 'Zählt reihum – bei goldenen Zahlen heißt es „Oops!“',
 
   mount(ctx) {
-    const { el, level, mode, board } = ctx;
+    const { el, maxLevel, mode, board } = ctx;
     const h = EG.h;
-    const cfg = { 1: { max: 30, ks: [5] }, 2: { max: 30, ks: [4] }, 3: { max: 50, ks: [3, 4] } }[level];
+    const cfg = { 1: { max: 30, ks: [5] }, 2: { max: 30, ks: [4] }, 3: { max: 50, ks: [3, 4] } }[maxLevel];
     const isOops = (n) => cfg.ks.some((k) => n % k === 0);
     const rule = cfg.ks.length > 1 ? 'Vielfache von ' + cfg.ks.join(' und ') : 'Vielfache von ' + cfg.ks[0];
     let n = 1, turn = 0, best = 0;

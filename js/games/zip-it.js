@@ -1,5 +1,6 @@
 // Zip it! – Kurz- und Langformen (I am ↔ I'm). Lehrkraft vergibt den Punkt.
 // Hilfen je Niveau: N1 = Emoji + Deutsch + Satz, N2 = Emoji + Satz, N3 = keine.
+// Bei mehreren gewählten Niveaus wird je Runde eines davon zufällig genommen.
 EG.registerGame({
   id: 'zip-it',
   name: 'Zip it!',
@@ -8,18 +9,19 @@ EG.registerGame({
   description: 'Eine Form erscheint – schreibe die andere!',
 
   mount(ctx) {
-    const { el, year, level, unit, mode, board } = ctx;
+    const { el, year, levels, mode, board } = ctx;
     const h = EG.h;
     const ROUNDS = 10;
 
-    const pool = (unit.contractions || EG.contractions).filter((c) => (c.from || 5) <= year);
-    const deck = EG.shuffle(pool).slice(0, ROUNDS).map((c) => ({ c, toShort: Math.random() < 0.5 }));
+    const pool = EG.contractions.filter((c) => (c.from || 5) <= year);
+    const deck = EG.shuffle(pool).slice(0, ROUNDS).map((c) => ({
+      c, toShort: Math.random() < 0.5, level: levels[Math.floor(Math.random() * levels.length)] }));
     let i = 0;
 
     function sentence(c, form) { return c.ctx.replace('{}', form); }
 
     function showRound() {
-      const { c, toShort } = deck[i];
+      const { c, toShort, level } = deck[i];
       const given = toShort ? c.long : c.short;
       const answer = toShort ? c.short : c.long;
       el.replaceChildren();

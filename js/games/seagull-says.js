@@ -1,5 +1,5 @@
 // Seagull says – wie "Simon says". Nur Befehle mit "Seagull says" ausführen!
-// Hilfen je Niveau: N1 = Emoji + Deutsch, N2 = Emoji, N3 = keine. Lehrkraft vergibt den Punkt.
+// Hilfen je Niveau des Befehls: N1 = Emoji + Deutsch, N2 = Emoji, N3 = keine. Lehrkraft vergibt den Punkt.
 EG.registerGame({
   id: 'seagull-says',
   name: 'Seagull says',
@@ -8,11 +8,11 @@ EG.registerGame({
   description: 'Nur mit „Seagull says“ ausführen!',
 
   mount(ctx) {
-    const { el, year, level, mode, board } = ctx;
+    const { el, year, maxLevel, mode, board } = ctx;
     const h = EG.h;
     const ROUNDS = 10;
 
-    const pool = EG.commands.filter((c) => c.level <= level && (c.from || 5) <= year);
+    const pool = EG.commands.filter((c) => c.level <= maxLevel && (c.from || 5) <= year);
     const deck = EG.shuffle(pool).slice(0, ROUNDS).map((c) => ({ c, trick: Math.random() < 0.3 }));
     let i = 0;
 
@@ -45,8 +45,8 @@ EG.registerGame({
         showBtn.hidden = true;
         bubble.hidden = false;
         const hints = [];
-        if (level <= 2 && c.emoji) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, c.emoji));
-        if (level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + c.de));
+        if (c.level <= 2 && c.emoji) hints.push(h('div', { class: 'hint-emoji', 'aria-hidden': 'true' }, c.emoji));
+        if (c.level === 1) hints.push(h('div', { class: 'hint-de' }, '🇩🇪 ' + c.de));
         bubble.replaceChildren(
           h('div', { class: 'cmd' }, trick ? c.text : [h('span', { class: 'says' }, '🐦 Seagull says: '), c.text], EG.speakButton(full)),
           h('div', { class: 'hints' }, hints));

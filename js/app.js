@@ -1,11 +1,42 @@
-// Oberfläche: Jahrgang → Unit → Niveau → Spiel → Modus → Spiel. Plus Einstellungen.
+// Oberfläche: Jahrgang → Auswahl (Units, Abschnitte, Niveaus) → Spiel → Modus → Spiel. Plus Einstellungen.
 (() => {
   const { h } = EG;
   const root = document.getElementById('app');
-  const sel = { year: null, unit: null, level: null, game: null };
+  // flow.state = { units: { unitId: [sectionId, …] }, levels: [1,2,3] } – wird je Jahrgang gemerkt
+  const flow = { year: null, state: null, words: [], game: null };
   const PALETTE = ['c-mustard', 'c-blue', 'c-pink', 'c-red', 'c-green'];
   const pal = (i) => PALETTE[i % PALETTE.length];
 
+  // ---------- Auswahl: Daten ----------
+  const unitsOf = (year) => EG.units.filter((u) => u.year === year);
+  const sectionsOf = (u) => {
+    if (!u.sections) return [{ id: 'all', name: 'Alle Wörter' }];
+    const used = new Set(u.words.map((w) => w.section));
+    return u.sections.filter((s) => used.has(s.id)); // fehlende Abschnitte nicht anzeigen
+  };
+  const defaultState = (year) => ({
+    units: Object.fromEntries(unitsOf(year).map((u) => [u.id, sectionsOf(u).map((s) => s.id)])),
+    levels: EG.levels.map((l) => l.id),
+  });
+  function loadState(year) {
+    const saved = EG.store.getSel(year);
+    if (!saved) return defaultState(year);
+    const state = { units: {}, levels: (saved.levels || []).filter((l) => EG.levels.some((x) => x.id === l)) };
+    unitsOf(year).forEach((u) => {
+      const valid = sectionsOf(u).map((s) => s.id);
+      const chosen = ((saved.units || {})[u.id] || []).filter((id) => valid.includes(id));
+      if (chosen.length) state.units[u.id] = chosen;
+    });
+    if (!state.levels.length) state.levels = EG.levels.map((l) => l.id);
+    return state;
+  }
+  const wordsFor = (year, state) => unitsOf(year)
+    .filter((u) => state.units[u.id])
+    .flatMap((u) => u.words
+      .filter((w) => state.units[u.id].includes(w.section || 'all') && state.levels.includes(w.level))
+      .map((w) => ({ ...w, unitId: u.id, unitTitle: u.title })));
+
+  // ---------- Bausteine ----------
   function muteButton() {
     const b = h('button', { class: 'btn-icon', type: 'button', onclick: () => {
       EG.store.setMuted(!EG.store.isMuted());
@@ -36,11 +67,18 @@
     window.scrollTo(0, 0);
   }
 
+  const levelsLabel = (levels) => levels.slice().sort().map((l) => 'N' + l).join(' + ');
+
   function crumbs() {
     const parts = [];
-    if (sel.year) parts.push('📚 Jahrgang ' + sel.year);
-    if (sel.unit) parts.push('🔖 ' + sel.unit.title);
-    if (sel.level) parts.push(`${sel.level.stars} ${sel.level.name}`);
+    if (flow.year) parts.push('📚 Jahrgang ' + flow.year);
+    if (flow.state) {
+      const ids = Object.keys(flow.state.units);
+      const secs = ids.reduce((n, id) => n + flow.state.units[id].length, 0);
+      parts.push(`🔖 ${ids.length} Unit(s) · ${secs} Abschnitt(e)`);
+      parts.push('★ ' + levelsLabel(flow.state.levels));
+      parts.push(`🔤 ${flow.words.length} Wörter`);
+    }
     return h('div', { class: 'crumbs' }, parts.map((p) => h('span', { class: 'chip' }, p)));
   }
 
@@ -51,86 +89,135 @@
       sub ? h('span', { class: 'tile-sub' }, sub) : null);
   }
 
+  // Ankreuzfeld als Knopf: echtes Kontrollkästchen, Haken im Kästchen (nicht nur Farbe)
+  function opt(checked, label, onchange, cls = '') {
+    const input = h('input', { type: 'checkbox' });
+    input.checked = checked;
+    input.addEventListener('change', () => { EG.sound('click'); onchange(input.checked); });
+    return h('label', { class: 'opt ' + cls + (checked ? ' on' : '') }, input,
+      h('span', { class: 'box', 'aria-hidden': 'true' }), h('span', { class: 'opt-label' }, label));
+  }
+
   // 1) Jahrgang
   function showYears() {
-    Object.assign(sel, { year: null, unit: null, level: null, game: null });
+    Object.assign(flow, { year: null, state: null, words: [], game: null });
     screen(
       topbar({ title: 'English Games' }),
       h('h2', { class: 'step' }, 'Welcher Jahrgang?'),
       h('div', { class: 'grid grid-3' }, EG.years.map((y, i) =>
         tile({ cls: pal(i), icon: String(y), title: 'Klasse ' + y,
-          sub: EG.units.filter((u) => u.year === y).length + ' Unit(s)', onclick: () => { sel.year = y; showUnits(); } }))),
+          sub: unitsOf(y).length + ' Unit(s)', onclick: () => { flow.year = y; flow.state = loadState(y); showSelect(); } }))),
     );
   }
 
-  // 2) Unit
-  function showUnits() {
-    sel.unit = sel.level = sel.game = null;
-    const units = EG.units.filter((u) => u.year === sel.year);
-    screen(
-      topbar({ title: 'Unit wählen', back: showYears }), crumbs(),
-      units.length
-        ? h('div', { class: 'grid grid-3' }, units.map((u, i) =>
-            tile({ cls: pal(i), icon: '📖', title: u.title, sub: u.book || '', onclick: () => { sel.unit = u; showLevels(); } })))
-        : h('p', { class: 'empty card' }, '📭 Für diesen Jahrgang gibt es noch keine Units. Lege eine Datei in data/units/ an.'),
-    );
+  // 2) Auswahl: Units, Abschnitte, Niveaus
+  function showSelect() {
+    const year = flow.year;
+    const units = unitsOf(year);
+    const state = flow.state;
+    const body = h('div', { class: 'select' });
+    const foot = h('div', { class: 'select-foot' });
+
+    const commit = () => { EG.store.setSel(year, state); flow.words = wordsFor(year, state); render(); };
+
+    function render() {
+      flow.words = wordsFor(year, state);
+
+      const levelRow = h('div', { class: 'card' },
+        h('h2', { class: 'step' }, '★ Niveaus'),
+        h('div', { class: 'opts' }, EG.levels.map((l) => opt(state.levels.includes(l.id), `${l.stars} ${l.name} · ${l.title}`, (on) => {
+          const set = new Set(state.levels); on ? set.add(l.id) : set.delete(l.id);
+          if (set.size) state.levels = [...set].sort(); // mindestens ein Niveau bleibt gewählt
+          commit();
+        }))),
+        h('p', { class: 'hint-line' }, 'Die Hilfen (Emoji, Deutsch) richten sich nach dem Niveau des einzelnen Wortes.'));
+
+      const unitCards = units.map((u) => {
+        const secs = sectionsOf(u);
+        const chosen = state.units[u.id];
+        const countIn = (sid) => u.words.filter((w) => (w.section || 'all') === sid && state.levels.includes(w.level)).length;
+        return h('div', { class: 'card unit-card' },
+          h('div', { class: 'unit-head' },
+            opt(!!chosen, [h('strong', {}, '📖 ' + u.title), u.book ? ' · ' + u.book : ''], (on) => {
+              if (on) state.units[u.id] = secs.map((s) => s.id); else delete state.units[u.id];
+              commit();
+            }, 'opt-unit'),
+            h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { EG.sound('click'); state.units[u.id] = secs.map((s) => s.id); commit(); } }, 'alle')),
+          chosen && u.sections ? h('div', { class: 'opts sections' }, secs.map((s) =>
+            opt(chosen.includes(s.id), `${s.name} (${countIn(s.id)})`, (on) => {
+              const set = new Set(chosen); on ? set.add(s.id) : set.delete(s.id);
+              if (set.size) state.units[u.id] = secs.map((x) => x.id).filter((id) => set.has(id)); else delete state.units[u.id];
+              commit();
+            }))) : null);
+      });
+
+      body.replaceChildren(
+        h('h2', { class: 'step' }, '📖 Units und Abschnitte'),
+        ...(units.length ? unitCards : [h('p', { class: 'empty card' }, '📭 Für diesen Jahrgang gibt es noch keine Units. Lege eine Datei in data/units/ an.')]),
+        levelRow);
+
+      const n = flow.words.length;
+      foot.replaceChildren(
+        h('span', { class: 'foot-count' }, n ? `🔤 ${n} Wörter ausgewählt` : '⚠️ Keine Wörter ausgewählt – bitte Unit und Niveau ankreuzen.'),
+        h('button', { class: 'btn btn-big', type: 'button', onclick: () => { EG.sound('click'); showGames(); } }, 'Weiter →'));
+    }
+
+    screen(topbar({ title: 'Auswahl', back: showYears }), h('div', { class: 'crumbs' }, h('span', { class: 'chip' }, '📚 Jahrgang ' + year)), body, foot);
+    render();
   }
 
-  // 3) Niveau
-  function showLevels() {
-    sel.level = sel.game = null;
-    screen(
-      topbar({ title: 'Niveau wählen', back: showUnits }), crumbs(),
-      h('div', { class: 'grid grid-3' }, EG.levels.map((l, i) =>
-        tile({ cls: ['c-green', 'c-mustard', 'c-red'][i], icon: l.stars, title: `${l.name} · ${l.title}`, sub: l.desc,
-          onclick: () => { sel.level = l; showGames(); } }))),
-    );
-  }
-
-  // 4) Spiel
+  // 3) Spiel
   function showGames() {
-    sel.game = null;
-    const games = EG.games.filter((g) => EG.store.isGameOn(sel.year, g.id));
+    flow.game = null;
+    const games = EG.games.filter((g) => EG.store.isGameOn(flow.year, g.id));
+    const n = flow.words.length;
     screen(
-      topbar({ title: 'Spiel wählen', back: showLevels }), crumbs(),
+      topbar({ title: 'Spiel wählen', back: showSelect }), crumbs(),
       games.length
-        ? h('div', { class: 'grid grid-3' }, games.map((g, i) =>
-            tile({ cls: pal(i), icon: g.emoji, title: g.name, sub: g.tagline, onclick: () => { sel.game = g; showModes(); } })))
+        ? h('div', { class: 'grid grid-3' }, games.map((g, i) => {
+            const few = g.minWords && n < g.minWords;
+            return tile({ cls: few ? 'c-off' : pal(i), icon: g.emoji, title: g.name,
+              sub: few ? `⚠️ Zu wenige Wörter (${n} von mind. ${g.minWords}). Bitte mehr Units, Abschnitte oder Niveaus wählen.` : g.tagline,
+              disabled: few, onclick: () => { flow.game = g; showModes(); } });
+          }))
         : h('p', { class: 'empty card' }, '⚙️ Für diesen Jahrgang sind alle Spiele abgehakt. Bitte in den Einstellungen aktivieren.'),
     );
   }
 
-  // 5) Modus
+  // 4) Modus
   function showModes() {
     screen(
-      topbar({ title: sel.game.emoji + ' ' + sel.game.name, back: showGames }), crumbs(),
+      topbar({ title: flow.game.emoji + ' ' + flow.game.name, back: showGames }), crumbs(),
       h('h2', { class: 'step' }, 'Wer spielt?'),
       h('div', { class: 'grid grid-3' }, EG.modes.map((m, i) =>
         tile({ cls: pal(i + 1), icon: m.icon, title: m.name, sub: m.desc, onclick: () => play(m) }))),
     );
   }
 
-  // 6) Spielen
+  // 5) Spielen
   function play(mode) {
     const board = EG.createScoreboard(mode);
     const stage = h('main', { class: 'stage' });
+    const levels = flow.state.levels;
     const ctx = {
-      el: stage, mode, board, year: sel.year, unit: sel.unit, level: sel.level.id,
+      el: stage, mode, board, year: flow.year,
+      words: flow.words,                 // alle Wörter der Auswahl, je Wort mit eigenem level/section
+      levels, maxLevel: Math.max(...levels),
       exit: showGames,
       restart: () => play(mode),
     };
     screen(
-      topbar({ title: sel.game.emoji + ' ' + sel.game.name, back: showModes,
-        extra: h('span', { class: 'chip chip-level' }, `${sel.level.stars} ${sel.level.name}`) }),
+      topbar({ title: flow.game.emoji + ' ' + flow.game.name, back: showModes,
+        extra: h('span', { class: 'chip chip-level' }, '★ ' + levelsLabel(levels)) }),
       board.el, stage,
     );
-    sel.game.mount(ctx);
+    flow.game.mount(ctx);
   }
 
   // Einstellungen: Spiele je Jahrgang an-/abhaken
   function showSettings() {
-    const prev = { ...sel };
-    const back = () => { Object.assign(sel, prev); showYears(); };
+    const prev = { ...flow };
+    const back = () => { Object.assign(flow, prev); showYears(); };
     screen(
       topbar({ title: '⚙️ Einstellungen', back }),
       h('p', { class: 'hint-line' }, 'Hake pro Jahrgang an, welche Spiele angezeigt werden. Gespeichert wird nur auf diesem Gerät.'),
