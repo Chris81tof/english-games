@@ -189,7 +189,7 @@
     screen(
       topbar({ title: flow.game.emoji + ' ' + flow.game.name, back: showGames }), crumbs(),
       h('h2', { class: 'step' }, 'Wer spielt?'),
-      h('div', { class: 'grid grid-3' }, EG.modes.map((m, i) =>
+      h('div', { class: 'grid grid-3' }, EG.modes.filter((m) => !flow.game.modes || flow.game.modes.includes(m.id)).map((m, i) =>
         tile({ cls: pal(i + 1), icon: m.icon, title: m.name, sub: m.desc, onclick: () => play(m) }))),
     );
   }

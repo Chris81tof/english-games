@@ -173,3 +173,21 @@ h2.step { font-family: var(--head); font-weight: 400; font-size: 2.2rem; margin:
 .foot-count { font-weight: 800; font-size: 1.3rem; }
 .c-off { background: #e7e0cb; }
 .tile:disabled { cursor: not-allowed; box-shadow: 0 .15rem 0 var(--ink); border-style: dashed; }
+
+/* Slap the board */
+.slap-prompt { min-width: min(30rem, 100%); text-align: center; font-family: var(--head); font-size: 2.6rem; display: flex; align-items: center; justify-content: center; gap: 1rem; }
+.slap-prompt.big { font-size: 4rem; }
+.slap-wrap { display: flex; gap: 1rem; width: 100%; flex-wrap: wrap; }
+.slap-half { flex: 1 1 22rem; border: var(--border); border-radius: var(--radius); padding: .8rem; }
+.slap-half.side-0 { background: var(--blue); } .slap-half.side-1 { background: var(--pink); }
+.slap-half.locked { opacity: .6; }
+.slap-name { font-weight: 800; font-size: 1.3rem; margin-bottom: .5rem; }
+.slap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.slap-card { position: relative; border: var(--border); border-radius: 1rem; background: var(--white); padding: .6rem .3rem; min-height: 7.5rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem; font-weight: 800; font-size: 1.15rem; line-height: 1.15; box-shadow: 0 .25rem 0 var(--ink); touch-action: manipulation; }
+.slap-card:active:not(:disabled) { transform: translateY(.2rem); box-shadow: 0 .05rem 0 var(--ink); }
+.slap-card .em { font-size: 2.8rem; line-height: 1; }
+.slap-card .mark { position: absolute; top: .2rem; right: .4rem; font-size: 1.4rem; }
+.slap-card.right { background: var(--green); }
+.slap-card.wrong { background: #f0a58f; }
+.slap-card:disabled { cursor: default; }
