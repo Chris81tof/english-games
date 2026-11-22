@@ -14,3 +14,10 @@ Braucht ein Spiel Vokabeln, gib `minWords: n` an – bei weniger Wörtern zeigt 
 
 ## Neue Unit
 `data/units/jgX-name.js` mit `EG.registerUnit({ year, id, title, book, sections: [{ id, name }], words: [{ en, de, emoji, level, section }] })` und eine `<script>`-Zeile in `index.html`. Abschnitte ohne Wörter werden nicht angezeigt.
+
+## Wörter bearbeiten und einbauen
+In der Wortliste (Auswahlseite → „Wörter ansehen“) lassen sich Deutsch, Emoji und Niveau direkt ändern. Die Änderungen liegen nur in diesem Browser und gelten sofort in allen Spielen. „Änderungen exportieren“ lädt eine JSON-Datei herunter. Zum Einbauen in die Vokabeldateien:
+
+```bash
+python3 tools/einbauen.py english-games-aenderungen-JJJJ-MM-TT.json
+```

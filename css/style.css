@@ -209,3 +209,16 @@ h2.step { font-family: var(--head); font-weight: 400; font-size: 2.2rem; margin:
 .wl-emoji { font-size: 1.6rem; }
 .lvl { display: inline-block; border: .15rem solid var(--ink); border-radius: 999px; padding: .05rem .7rem; font-weight: 800; white-space: nowrap; }
 .lvl-1 { background: var(--green); } .lvl-2 { background: var(--mustard); } .lvl-3 { background: #f0a58f; }
+
+/* Wortliste bearbeiten */
+.edit { font: inherit; font-weight: 600; border: .15rem solid var(--ink); border-radius: .6rem; background: var(--white); padding: .3rem .6rem; min-height: 2.6rem; }
+.edit-de { width: 100%; min-width: 12rem; }
+.edit-emoji { width: 5.5rem; font-size: 1.5rem; text-align: center; }
+.lvl-sel { font-weight: 800; padding-right: .3rem; }
+.wl-chg { width: 2rem; font-size: 1.3rem; font-weight: 800; text-align: center; }
+.wl-table tr.changed td { background: #fff3c4; }
+.wl-table tr.changed td.wl-chg { border-left: .35rem solid var(--ink); }
+.overlay { position: fixed; inset: 0; background: rgba(30, 27, 58, .55); display: grid; place-items: center; z-index: 10; padding: 1rem; }
+.dialog { max-width: 36rem; text-align: center; font-size: 1.3rem; }
+.btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: 0 .1rem 0 var(--ink); }
+.edit.lvl-1 { background: var(--green); } .edit.lvl-2 { background: var(--mustard); } .edit.lvl-3 { background: #f0a58f; }

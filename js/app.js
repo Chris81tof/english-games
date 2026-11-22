@@ -168,7 +168,55 @@
     render();
   }
 
-  // Wortliste: alle ausgewählten Wörter als Tabelle, filter- und sortierbar
+  // ---------- Änderungen an Wörtern (Deutsch, Emoji, Niveau) ----------
+  // Sie liegen im Browser (localStorage) und werden beim Start auf die Wortlisten gelegt, gelten also in allen Spielen.
+  const EDITABLE = ['de', 'emoji', 'level'];
+  const findWord = (unitId, en) => { const u = EG.units.find((x) => x.id === unitId); return u && u.words.find((w) => w.en === en); };
+  const isChanged = (w) => !!w._orig && EDITABLE.some((f) => w[f] !== w._orig[f]);
+  const editKey = (unitId, en) => unitId + '|' + en;
+  function persistEdit(unitId, w) {
+    const edits = EG.store.getEdits(), k = editKey(unitId, w.en);
+    if (isChanged(w)) edits[k] = { de: w.de, emoji: w.emoji, level: w.level }; else delete edits[k];
+    EG.store.setEdits(edits);
+  }
+  function initEdits() {
+    EG.units.forEach((u) => u.words.forEach((w) => { w._orig = { de: w.de, emoji: w.emoji, level: w.level }; }));
+    const edits = EG.store.getEdits(), keep = {};
+    for (const [k, patch] of Object.entries(edits)) {
+      const i = k.indexOf('|'), w = findWord(k.slice(0, i), k.slice(i + 1));
+      if (!w) continue;                                   // Wort gibt es nicht mehr
+      EDITABLE.forEach((f) => { if (patch[f] != null) w[f] = patch[f]; });
+      if (isChanged(w)) keep[k] = patch;                  // schon eingebaute Änderungen fallen weg
+    }
+    EG.store.setEdits(keep);
+  }
+  const editCount = () => Object.keys(EG.store.getEdits()).length;
+
+  function download(name, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = h('a', { href: url, download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function exportEdits() {
+    const changes = [];
+    EG.units.forEach((u) => u.words.filter(isChanged).forEach((w) => changes.push({
+      year: u.year, unit: u.id, en: w.en, de: w.de, emoji: w.emoji, level: w.level, original: { ...w._orig } })));
+    const day = new Date().toISOString().slice(0, 10);
+    download(`english-games-aenderungen-${day}.json`, JSON.stringify({ app: 'english-games', version: 1, exported: day, changes }, null, 2));
+  }
+  function confirmBox(text, yesLabel, onYes) {
+    const close = () => box.remove();
+    const box = h('div', { class: 'overlay', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': text },
+      h('div', { class: 'card dialog' }, h('p', {}, '⚠️ ' + text),
+        h('div', { class: 'row' },
+          h('button', { class: 'btn btn-big', type: 'button', onclick: () => { close(); onYes(); } }, yesLabel),
+          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: close }, 'Abbrechen'))));
+    root.append(box);
+    box.querySelector('button:last-child').focus();
+  }
+
+  // Wortliste: alle ausgewählten Wörter als Tabelle, filter- und sortierbar; Deutsch, Emoji, Niveau sind bearbeitbar
   function showWords() {
     const all = flow.words.map((w, idx) => {
       const unit = EG.units.find((u) => u.id === w.unitId);
@@ -180,14 +228,26 @@
     const f = { level: '', unit: '', section: '' };
     let sort = { key: null, dir: 1 };
     const body = h('div', { class: 'wl' });
+    const metaEl = h('div', { class: 'wl-count' });
+    const tableBox = h('div', { class: 'card wl-wrap' });
+    const exportBtn = h('button', { class: 'btn', type: 'button', onclick: exportEdits }, '⬇ Änderungen exportieren');
+    const discardBtn = h('button', { class: 'btn btn-plain', type: 'button', onclick: () => confirmBox(
+      `Alle ${editCount()} Änderungen verwerfen? Das kann nicht rückgängig gemacht werden.`, 'Ja, verwerfen', () => {
+        EG.units.forEach((u) => u.words.forEach((w) => { if (w._orig) Object.assign(w, w._orig); }));
+        EG.store.setEdits({});
+        all.forEach((r) => Object.assign(r, r._orig));
+        render();
+      }) }, '🗑 Änderungen verwerfen');
 
     const COLS = [
-      { key: 'en', label: 'Englisch' }, { key: 'de', label: 'Deutsch' }, { key: 'emoji', label: 'Emoji', nosort: true },
+      { key: 'chg', label: '✎', nosort: true, title: 'Geändert' },
+      { key: 'en', label: 'Englisch' }, { key: 'de', label: 'Deutsch' }, { key: 'emoji', label: 'Emoji' },
       { key: 'level', label: 'Niveau' }, { key: 'unitIdx', label: 'Unit' }, { key: 'secIdx', label: 'Abschnitt' },
     ];
     const cmp = (a, b) => {
       const k = sort.key;
-      const r = (k === 'en' || k === 'de') ? a[k].localeCompare(b[k], k === 'de' ? 'de' : 'en', { sensitivity: 'base' }) : a[k] - b[k];
+      const r = (k === 'en' || k === 'de') ? a[k].localeCompare(b[k], k === 'de' ? 'de' : 'en', { sensitivity: 'base' })
+        : k === 'emoji' ? String(a[k]).localeCompare(String(b[k])) : a[k] - b[k];
       return r || a.idx - b.idx; // bei Gleichstand: Reihenfolge der Datei
     };
 
@@ -196,6 +256,51 @@
         h('option', { value: '' }, 'alle'), options.map((o) => h('option', { value: o.value }, o.label)));
       sel.value = value;
       return h('label', { class: 'filter' }, h('span', {}, label), sel);
+    }
+
+    function refreshMeta() {
+      const n = editCount();
+      metaEl.textContent = `🔤 ${all.length} Wörter ausgewählt` + (n ? ` · ✎ ${n} geändert` : '');
+      exportBtn.disabled = discardBtn.disabled = !n;
+    }
+
+    function rowEl(w) {
+      const src = findWord(w.unitId, w.en);
+      const mark = h('td', { class: 'wl-chg' });
+      const tr = h('tr', {}, mark);
+      const refresh = () => {
+        const ch = isChanged(w);
+        tr.classList.toggle('changed', ch);
+        mark.textContent = ch ? '✎' : '';
+        mark.title = ch ? 'Geändert' : '';
+        mark.setAttribute('aria-label', ch ? 'Geändert' : '');
+      };
+      const save = (field, value) => { src[field] = value; w[field] = value; persistEdit(w.unitId, src); refresh(); refreshMeta(); };
+      const text = (field, cls, label) => {
+        const inp = h('input', { class: 'edit ' + cls, type: 'text', 'aria-label': `${label} zu ${w.en}`, autocomplete: 'off', spellcheck: 'false' });
+        inp.value = w[field];
+        inp.addEventListener('change', () => {
+          const v = inp.value.trim();
+          if (!v) inp.value = w._orig[field]; // leer geht nicht: ursprünglichen Wert zurück
+          save(field, v || w._orig[field]);
+        });
+        return inp;
+      };
+      const lvl = h('select', { class: 'edit lvl-sel lvl-' + w.level, 'aria-label': 'Niveau zu ' + w.en },
+        EG.levels.map((l) => h('option', { value: l.id }, l.name)));
+      lvl.value = w.level;
+      lvl.addEventListener('change', () => { lvl.className = 'edit lvl-sel lvl-' + lvl.value; save('level', +lvl.value); });
+
+      tr.append(
+        h('td', {}, h('button', { class: 'say', type: 'button', 'aria-label': 'Vorlesen: ' + w.en, onclick: () => EG.speak(w.en) },
+          h('span', { 'aria-hidden': 'true' }, '🔊 '), w.en)),
+        h('td', {}, text('de', 'edit-de', 'Deutsch')),
+        h('td', {}, text('emoji', 'edit-emoji', 'Emoji')),
+        h('td', {}, lvl),
+        h('td', {}, w.unitTitle),
+        h('td', {}, w.secName));
+      refresh();
+      return tr;
     }
 
     function render() {
@@ -212,7 +317,7 @@
 
       const head = h('tr', {}, COLS.map((c) => {
         const active = sort.key === c.key;
-        const th = h('th', { scope: 'col', 'aria-sort': active ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none' });
+        const th = h('th', { scope: 'col', title: c.title, 'aria-sort': active ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none' });
         if (c.nosort) th.append(c.label);
         else th.append(h('button', { class: 'sort', type: 'button', onclick: () => {
           if (!active) sort = { key: c.key, dir: 1 }; else if (sort.dir === 1) sort.dir = -1; else sort = { key: null, dir: 1 };
@@ -221,25 +326,23 @@
         return th;
       }));
 
-      body.replaceChildren(
-        h('div', { class: 'wl-count' }, `🔤 ${all.length} Wörter ausgewählt`
-          + (rows.length !== all.length ? ` · ${rows.length} angezeigt` : '')),
-        h('div', { class: 'wl-filters' },
-          select('Niveau', f.level, flow.state.levels.slice().sort().map((l) => ({ value: String(l), label: 'N' + l })), (v) => (f.level = v)),
-          select('Unit', f.unit, unitOpts, (v) => (f.unit = v)),
-          select('Abschnitt', f.section, secOpts, (v) => (f.section = v)),
-          h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { f.level = f.unit = f.section = ''; sort = { key: null, dir: 1 }; render(); } }, '↺ Zurücksetzen')),
-        h('div', { class: 'card wl-wrap' }, rows.length
-          ? h('table', { class: 'wl-table' }, h('thead', {}, head), h('tbody', {}, rows.map((w) => h('tr', {},
-              h('td', {}, h('button', { class: 'say', type: 'button', 'aria-label': 'Vorlesen: ' + w.en, onclick: () => EG.speak(w.en) },
-                h('span', { 'aria-hidden': 'true' }, '🔊 '), w.en)),
-              h('td', {}, w.de),
-              h('td', { class: 'wl-emoji', 'aria-label': 'Emoji' }, w.emoji),
-              h('td', {}, h('span', { class: 'lvl lvl-' + w.level }, 'N' + w.level)),
-              h('td', {}, w.unitTitle),
-              h('td', {}, w.secName)))))
-          : h('p', { class: 'empty' }, 'Keine Wörter für diese Filter.')));
+      refreshMeta();
+      tableBox.replaceChildren(rows.length
+        ? h('table', { class: 'wl-table' }, h('thead', {}, head), h('tbody', {}, rows.map(rowEl)))
+        : h('p', { class: 'empty' }, 'Keine Wörter für diese Filter.'));
+      shown.textContent = rows.length !== all.length ? `${rows.length} von ${all.length} Wörtern angezeigt` : '';
+      filters.replaceChildren(
+        select('Niveau', f.level, flow.state.levels.slice().sort().map((l) => ({ value: String(l), label: 'N' + l })), (v) => (f.level = v)),
+        select('Unit', f.unit, unitOpts, (v) => (f.unit = v)),
+        select('Abschnitt', f.section, secOpts, (v) => (f.section = v)),
+        h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { f.level = f.unit = f.section = ''; sort = { key: null, dir: 1 }; render(); } }, '↺ Filter zurücksetzen'));
     }
+    const shown = h('div', { class: 'hint-line' });
+    const filters = h('div', { class: 'wl-filters' });
+
+    body.append(metaEl,
+      h('p', { class: 'hint-line' }, '✏️ Deutsch, Emoji und Niveau kannst du direkt ändern (Felder mit Rahmen). Englisch, Unit und Abschnitt sind gesperrt. Änderungen gelten sofort in allen Spielen und werden in diesem Browser gespeichert.'),
+      h('div', { class: 'wl-filters' }, exportBtn, discardBtn), filters, shown, tableBox);
 
     screen(topbar({ title: '📋 Wortliste', back: showSelect }), crumbs(), body);
     render();
@@ -318,5 +421,6 @@
     });
   }
 
+  initEdits();
   showYears();
 })();
