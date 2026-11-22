@@ -9,6 +9,7 @@ Start:  python3 tools/lehrkraft.py        (oder Doppelklick auf Lehrkraft-starte
 - Als Änderung gilt alles, was vom letzten Git-Commit abweicht (✎ in der Wortliste).
 - Übersetzungen in andere Sprachen stehen in data/i18n/<sprache>.js; eine bearbeitete gilt als geprüft.
 - Die PIN für den Schüler-Modus wird als Hash in data/pin.js gespeichert.
+- Welche Spiele pro Jahrgang an-/abgeschaltet sind, steht in data/settings.js und gilt für alle Geräte.
 """
 import hashlib
 import json
@@ -25,6 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 UNITS = ROOT / 'data' / 'units'
 PIN_FILE = ROOT / 'data' / 'pin.js'
+SETTINGS_FILE = ROOT / 'data' / 'settings.js'
 I18N = ROOT / 'data' / 'i18n'
 HOST, PORT = '127.0.0.1', 8123
 FIELDS = ('de', 'emoji', 'level')
@@ -212,6 +214,35 @@ def changes():
     return out
 
 
+# ---------- Spiele-Einstellung (welche Spiele pro Jahrgang gezeigt werden) ----------
+def read_game_off():
+    m = re.search(r'EG\.gameOff\s*=\s*(\{.*?\});', SETTINGS_FILE.read_text(encoding='utf-8'), re.S)
+    return json.loads(m.group(1)) if m else {}
+
+
+def write_game_off(off):
+    write_atomic(SETTINGS_FILE,
+                 '// Von tools/lehrkraft.py erzeugt: welche Spiele sind pro Jahrgang ausgeschaltet. Gilt für alle Geräte\n'
+                 '// (Teil des veröffentlichten Standes) – nicht nur für das Gerät, auf dem es eingestellt wurde.\n'
+                 'EG.gameOff = %s;\n' % json.dumps(off, ensure_ascii=False, indent=2))
+
+
+def set_game(year, game, on):
+    if not re.fullmatch(r'\d{1,2}', year or ''):
+        raise ValueError('Ungültiger Jahrgang')
+    if not re.fullmatch(r'[a-z0-9-]{1,40}', game or ''):
+        raise ValueError('Ungültige Spiel-ID')
+    off = read_game_off()
+    current = set(off.get(year, []))
+    current.discard(game) if on else current.add(game)
+    if current:
+        off[year] = sorted(current)
+    else:
+        off.pop(year, None)
+    write_game_off(off)
+    return off.get(year, [])
+
+
 def set_pin(pin):
     if not re.fullmatch(r'\d{4}', pin):
         raise ValueError('Die PIN muss aus genau 4 Ziffern bestehen')
@@ -301,6 +332,9 @@ class Handler(SimpleHTTPRequestHandler):
                 if path == '/api/pin':
                     set_pin(str(data.get('pin', '')))
                     return self.send_json(200, {'ok': True})
+                if path == '/api/game-toggle':
+                    off = set_game(str(data.get('year')), str(data.get('game')), bool(data.get('on')))
+                    return self.send_json(200, {'ok': True, 'off': off})
             self.send_json(404, {'error': 'unbekannt'})
         except (ValueError, json.JSONDecodeError) as e:
             self.send_json(400, {'error': str(e)})

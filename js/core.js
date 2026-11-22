@@ -49,7 +49,7 @@
 
   // ---------- Einstellungen (nur dieses Gerät, keine Personendaten) ----------
   const KEY = 'englishGames.v1';
-  let data = { muted: false, off: {}, sel: {} };
+  let data = { muted: false, sel: {} };
   try { Object.assign(data, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* ohne Speicher weiter */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* egal */ } };
 
@@ -60,13 +60,9 @@
     getSel: (year) => (data.sel && data.sel[year]) || null,
     setSel(year, sel) { (data.sel = data.sel || {})[year] = sel; save(); },
     setMuted(m) { data.muted = !!m; save(); },
-    isGameOn: (year, id) => !(data.off[year] || []).includes(id),
-    setGameOn(year, id, on) {
-      const list = new Set(data.off[year] || []);
-      on ? list.delete(id) : list.add(id);
-      data.off[year] = [...list];
-      save();
-    },
+    // Welche Spiele pro Jahrgang angezeigt werden: gilt für alle Geräte, kommt aus data/settings.js
+    // (EG.gameOff) und lässt sich nur im Lehrkraft-Modus ändern (siehe showSettings in app.js).
+    isGameOn: (year, id) => !((EG.gameOff && EG.gameOff[year]) || []).includes(id),
   };
 
   // ---------- Töne (Web Audio) ----------

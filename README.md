@@ -44,3 +44,6 @@ Jetzt stehen alle 16 Sprachen aus der Anfrage zur Verfügung: Englisch, Deutsch,
 - **Word scramble** – Buchstaben eines Wortes sind gemischt, die Lösung wird per Knopf aufgedeckt.
 
 Alle drei nutzen dieselbe Auswahl (Units/Abschnitte/Niveaus) und sind in allen 16 Sprachen verfügbar.
+
+## Spiele an-/abhaken gilt für alle Geräte
+Die Einstellung, welche Spiele pro Jahrgang angezeigt werden, steht in `data/settings.js` und ist damit Teil des veröffentlichten Standes – nicht mehr nur auf einem Gerät gespeichert. Ändern lässt sie sich nur im Lehrkraft-Modus (Einstellungen → Tabelle); überall sonst (auch in den Schul-iPads und auf GitHub Pages) ist sie nur lesbar. Nach einer Änderung bitte committen und pushen, damit sie online ankommt.

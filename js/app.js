@@ -544,31 +544,47 @@
       msg);
   }
 
-  // Einstellungen: Spiele je Jahrgang an-/abhaken
+  // Einstellungen: Spiele je Jahrgang an-/abhaken. Gilt für alle Geräte (Datei data/settings.js),
+  // deshalb nur im Lehrkraft-Modus änderbar; sonst nur lesbar.
   function showSettings() {
     current = showSettings;
     const prev = { ...flow };
     const back = () => { Object.assign(flow, prev); showYears(); };
+    const errEl = h('p', { class: 'verdict v-trick', role: 'alert', hidden: true });
+
+    async function toggle(year, gameId, on, inp) {
+      try {
+        const res = await api('/api/game-toggle', { year, game: gameId, on });
+        (EG.gameOff[year] = res.off); if (!res.off.length) delete EG.gameOff[year];
+        errEl.hidden = true;
+      } catch (e) {
+        inp.checked = !on; // zurücksetzen
+        errEl.textContent = '✗ Nicht gespeichert: ' + e.message + ' – läuft der Lehrkraft-Server noch?';
+        errEl.hidden = false;
+        EG.sound('wrong');
+      }
+    }
+
     screen(
       topbar({ title: '⚙️ Einstellungen', back }),
-      h('p', { class: 'hint-line' }, 'Hake pro Jahrgang an, welche Spiele angezeigt werden. Gespeichert wird nur auf diesem Gerät.'),
+      h('p', { class: 'hint-line' }, app.teacher
+        ? 'Hake pro Jahrgang an, welche Spiele angezeigt werden. Gilt für alle Geräte, sobald veröffentlicht (committen und pushen).'
+        : 'Welche Spiele pro Jahrgang angezeigt werden, legt die Lehrkraft fest (nur im Lehrkraft-Modus änderbar).'),
       app.teacher ? pinCard() : null,
+      errEl,
       h('div', { class: 'settings card' },
         h('table', {},
           h('thead', {}, h('tr', {}, h('th', {}, 'Spiel'), EG.years.map((y) => h('th', {}, 'Kl. ' + y)))),
           h('tbody', {}, EG.games.map((g) => h('tr', {},
             h('th', { scope: 'row' }, g.emoji + ' ' + g.name),
-            EG.years.map((y) => h('td', {}, h('label', { class: 'check' },
-              h('input', { type: 'checkbox', checked: EG.store.isGameOn(y, g.id), 'aria-label': `${g.name} in Klasse ${y}`,
-                onchange: (e) => EG.store.setGameOn(y, g.id, e.target.checked) }),
-              h('span', { class: 'box', 'aria-hidden': 'true' })))))))),
+            EG.years.map((y) => {
+              const inp = h('input', { type: 'checkbox', disabled: !app.teacher, 'aria-label': `${g.name} in Klasse ${y}`,
+                onchange: (e) => toggle(y, g.id, e.target.checked, inp) });
+              inp.checked = EG.store.isGameOn(y, g.id); // Property setzen (Attribut allein reicht nicht bei false)
+              return h('td', {}, h('label', { class: 'check' }, inp, h('span', { class: 'box', 'aria-hidden': 'true' })));
+            }))))),
       ),
     );
-    // checked als Property setzen (Attribut allein reicht nicht bei false)
-    root.querySelectorAll('input[type=checkbox]').forEach((inp, idx) => {
-      const g = EG.games[Math.floor(idx / EG.years.length)], y = EG.years[idx % EG.years.length];
-      inp.checked = EG.store.isGameOn(y, g.id);
-    });
   }
 
   EG.assignKeys();
