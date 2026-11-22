@@ -34,3 +34,6 @@ Oben rechts wählt der Globus die Sprache (Standard: Englisch, britisch). Sie gi
 - Übersetzungen: `data/i18n/<sprache>.js`, je Eintrag `[Text, 0 = automatisch übersetzt | 1 = geprüft]`. Schlüssel: `unitId|englisch`, `cmd|…`, `cat|…`, `zip|…`.
 - Im Lehrkraft-Modus ist die Übersetzungsspalte bearbeitbar; 🤖 markiert automatisch übersetzte Einträge, eine bearbeitete Übersetzung gilt als geprüft.
 - Neue Unit: alle Sprachen mitübersetzen (`python3 tools/uebersetzung-schreiben.py <sprache> <datei.tsv>`, Zeilen `schlüssel<TAB>übersetzung`).
+
+## Alle Sprachen (Schritt 2)
+Jetzt stehen alle 16 Sprachen aus der Anfrage zur Verfügung: Englisch, Deutsch, Französisch, Spanisch, Italienisch, Türkisch, Kurdisch (Kurmancî), Arabisch, Bulgarisch, Ukrainisch, Russisch, Rumänisch, Polnisch, Griechisch, Bosnisch/Kroatisch/Serbisch, Albanisch. Alle 364 Einträge (Vokabeln, Befehle, Kategorien, Kurzformen) sind in jede Sprache automatisch übersetzt; alle Menütexte ebenso.
