@@ -191,3 +191,21 @@ h2.step { font-family: var(--head); font-weight: 400; font-size: 2.2rem; margin:
 .slap-card.right { background: var(--green); }
 .slap-card.wrong { background: #f0a58f; }
 .slap-card:disabled { cursor: default; }
+
+/* Wortliste */
+.foot-btns { display: flex; gap: 1rem; flex-wrap: wrap; }
+.wl { display: flex; flex-direction: column; gap: 1rem; padding-bottom: 2rem; }
+.wl-count { font-size: 1.5rem; font-weight: 800; }
+.wl-filters { display: flex; gap: 1rem; flex-wrap: wrap; align-items: end; }
+.filter { display: flex; flex-direction: column; gap: .2rem; font-weight: 800; }
+.filter select { font: inherit; font-weight: 600; border: var(--border); border-radius: 999px; padding: .5rem 1rem; background: var(--white); min-height: 3rem; max-width: 22rem; }
+.wl-wrap { padding: 0; overflow: auto; max-height: 62vh; }
+.wl-table { border-collapse: collapse; width: 100%; font-size: 1.1rem; }
+.wl-table th, .wl-table td { text-align: left; padding: .5rem .8rem; border-bottom: .1rem solid #e6dcc0; vertical-align: middle; }
+.wl-table thead th { position: sticky; top: 0; background: var(--mustard-soft); z-index: 1; border-bottom: var(--border); }
+.sort { background: none; border: 0; padding: .2rem 0; font-weight: 800; font-size: 1.1rem; cursor: pointer; }
+.say { background: none; border: 0; padding: .2rem .3rem; font-weight: 800; font-size: 1.1rem; text-align: left; cursor: pointer; border-radius: .5rem; }
+.say:hover { background: var(--mustard-soft); }
+.wl-emoji { font-size: 1.6rem; }
+.lvl { display: inline-block; border: .15rem solid var(--ink); border-radius: 999px; padding: .05rem .7rem; font-weight: 800; white-space: nowrap; }
+.lvl-1 { background: var(--green); } .lvl-2 { background: var(--mustard); } .lvl-3 { background: #f0a58f; }

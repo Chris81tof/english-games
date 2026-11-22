@@ -159,10 +159,89 @@
       const n = flow.words.length;
       foot.replaceChildren(
         h('span', { class: 'foot-count' }, n ? `🔤 ${n} Wörter ausgewählt` : '⚠️ Keine Wörter ausgewählt – bitte Unit und Niveau ankreuzen.'),
-        h('button', { class: 'btn btn-big', type: 'button', onclick: () => { EG.sound('click'); showGames(); } }, 'Weiter →'));
+        h('div', { class: 'foot-btns' },
+          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: () => { EG.sound('click'); showWords(); } }, '📋 Wörter ansehen'),
+          h('button', { class: 'btn btn-big', type: 'button', onclick: () => { EG.sound('click'); showGames(); } }, 'Weiter →')));
     }
 
     screen(topbar({ title: 'Auswahl', back: showYears }), h('div', { class: 'crumbs' }, h('span', { class: 'chip' }, '📚 Jahrgang ' + year)), body, foot);
+    render();
+  }
+
+  // Wortliste: alle ausgewählten Wörter als Tabelle, filter- und sortierbar
+  function showWords() {
+    const all = flow.words.map((w, idx) => {
+      const unit = EG.units.find((u) => u.id === w.unitId);
+      const secs = unit.sections || [];
+      const sec = secs.find((s) => s.id === w.section);
+      return { ...w, idx, unitTitle: unit.title, secName: sec ? sec.name : '–', secIdx: sec ? secs.indexOf(sec) : 0,
+        unitIdx: EG.units.indexOf(unit) };
+    });
+    const f = { level: '', unit: '', section: '' };
+    let sort = { key: null, dir: 1 };
+    const body = h('div', { class: 'wl' });
+
+    const COLS = [
+      { key: 'en', label: 'Englisch' }, { key: 'de', label: 'Deutsch' }, { key: 'emoji', label: 'Emoji', nosort: true },
+      { key: 'level', label: 'Niveau' }, { key: 'unitIdx', label: 'Unit' }, { key: 'secIdx', label: 'Abschnitt' },
+    ];
+    const cmp = (a, b) => {
+      const k = sort.key;
+      const r = (k === 'en' || k === 'de') ? a[k].localeCompare(b[k], k === 'de' ? 'de' : 'en', { sensitivity: 'base' }) : a[k] - b[k];
+      return r || a.idx - b.idx; // bei Gleichstand: Reihenfolge der Datei
+    };
+
+    function select(label, value, options, onchange) {
+      const sel = h('select', { onchange: (e) => { onchange(e.target.value); render(); } },
+        h('option', { value: '' }, 'alle'), options.map((o) => h('option', { value: o.value }, o.label)));
+      sel.value = value;
+      return h('label', { class: 'filter' }, h('span', {}, label), sel);
+    }
+
+    function render() {
+      const unitIds = [...new Set(all.map((w) => w.unitId))];
+      const unitOpts = unitIds.map((id) => ({ value: id, label: all.find((w) => w.unitId === id).unitTitle }));
+      const secPool = all.filter((w) => !f.unit || w.unitId === f.unit);
+      const secOpts = [...new Map(secPool.map((w) => [w.unitId + '|' + w.section, { value: w.unitId + '|' + w.section,
+        label: (f.unit ? '' : w.unitTitle.split(' – ')[0] + ' · ') + w.secName }])).values()];
+      if (f.section && !secOpts.some((o) => o.value === f.section)) f.section = '';
+
+      let rows = all.filter((w) => (!f.level || w.level === +f.level) && (!f.unit || w.unitId === f.unit)
+        && (!f.section || w.unitId + '|' + w.section === f.section));
+      if (sort.key) rows = rows.slice().sort((a, b) => sort.dir * cmp(a, b));
+
+      const head = h('tr', {}, COLS.map((c) => {
+        const active = sort.key === c.key;
+        const th = h('th', { scope: 'col', 'aria-sort': active ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none' });
+        if (c.nosort) th.append(c.label);
+        else th.append(h('button', { class: 'sort', type: 'button', onclick: () => {
+          if (!active) sort = { key: c.key, dir: 1 }; else if (sort.dir === 1) sort.dir = -1; else sort = { key: null, dir: 1 };
+          render();
+        } }, c.label, h('span', { class: 'arrow', 'aria-hidden': 'true' }, active ? (sort.dir === 1 ? ' ▲' : ' ▼') : ' ↕')));
+        return th;
+      }));
+
+      body.replaceChildren(
+        h('div', { class: 'wl-count' }, `🔤 ${all.length} Wörter ausgewählt`
+          + (rows.length !== all.length ? ` · ${rows.length} angezeigt` : '')),
+        h('div', { class: 'wl-filters' },
+          select('Niveau', f.level, flow.state.levels.slice().sort().map((l) => ({ value: String(l), label: 'N' + l })), (v) => (f.level = v)),
+          select('Unit', f.unit, unitOpts, (v) => (f.unit = v)),
+          select('Abschnitt', f.section, secOpts, (v) => (f.section = v)),
+          h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { f.level = f.unit = f.section = ''; sort = { key: null, dir: 1 }; render(); } }, '↺ Zurücksetzen')),
+        h('div', { class: 'card wl-wrap' }, rows.length
+          ? h('table', { class: 'wl-table' }, h('thead', {}, head), h('tbody', {}, rows.map((w) => h('tr', {},
+              h('td', {}, h('button', { class: 'say', type: 'button', 'aria-label': 'Vorlesen: ' + w.en, onclick: () => EG.speak(w.en) },
+                h('span', { 'aria-hidden': 'true' }, '🔊 '), w.en)),
+              h('td', {}, w.de),
+              h('td', { class: 'wl-emoji', 'aria-label': 'Emoji' }, w.emoji),
+              h('td', {}, h('span', { class: 'lvl lvl-' + w.level }, 'N' + w.level)),
+              h('td', {}, w.unitTitle),
+              h('td', {}, w.secName)))))
+          : h('p', { class: 'empty' }, 'Keine Wörter für diese Filter.')));
+    }
+
+    screen(topbar({ title: '📋 Wortliste', back: showSelect }), crumbs(), body);
     render();
   }
 
