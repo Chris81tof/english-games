@@ -15,9 +15,15 @@ Braucht ein Spiel Vokabeln, gib `minWords: n` an – bei weniger Wörtern zeigt 
 ## Neue Unit
 `data/units/jgX-name.js` mit `EG.registerUnit({ year, id, title, book, sections: [{ id, name }], words: [{ en, de, emoji, level, section }] })` und eine `<script>`-Zeile in `index.html`. Abschnitte ohne Wörter werden nicht angezeigt.
 
-## Wörter bearbeiten und einbauen
-In der Wortliste (Auswahlseite → „Wörter ansehen“) lassen sich Deutsch, Emoji und Niveau direkt ändern. Die Änderungen liegen nur in diesem Browser und gelten sofort in allen Spielen. „Änderungen exportieren“ lädt eine JSON-Datei herunter. Zum Einbauen in die Vokabeldateien:
+## Zwei Modi
+**Lehrkraft-Modus (lokal auf dem Laptop):** Doppelklick auf `Lehrkraft-starten.command` (oder `python3 tools/lehrkraft.py`). Die App öffnet sich unter http://localhost:8123. Beenden mit Strg+C.
+- Wortliste: Deutsch, Emoji und Niveau direkt in der Tabelle ändern. Jede Änderung wird sofort in `data/units/*.js` geschrieben und gilt in allen Spielen. ✎ markiert Zeilen, die sich vom letzten Commit unterscheiden. „Änderungen rückgängig“ nimmt die jeweils letzte Änderung zurück.
+- Einstellungen sind offen; dort wird auch die PIN für den Schüler-Modus festgelegt (Hash in `data/pin.js`).
 
+**Schüler-Modus (GitHub Pages oder jede Seite ohne den lokalen Server):** Wortliste nur lesbar. Statt des Zahnrads steht ein 🔒; 5× schnell darauf tippen öffnet die PIN-Abfrage, nach 3 falschen Eingaben ist sie 5 Minuten gesperrt. Die PIN ist eine Hürde für Kinder, kein echter Schutz (der Hash steht in einer öffentlichen Datei).
+
+## Änderungen online bringen
 ```bash
-python3 tools/einbauen.py english-games-aenderungen-JJJJ-MM-TT.json
+git add -A && git commit -m "Wortliste angepasst" && git push
 ```
+GitHub Pages veröffentlicht den neuen Stand nach etwa einer Minute.

@@ -49,14 +49,12 @@
 
   // ---------- Einstellungen (nur dieses Gerät, keine Personendaten) ----------
   const KEY = 'englishGames.v1';
-  let data = { muted: false, off: {}, sel: {}, edits: {} };
+  let data = { muted: false, off: {}, sel: {} };
   try { Object.assign(data, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* ohne Speicher weiter */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* egal */ } };
 
   EG.store = {
     isMuted: () => data.muted,
-    getEdits: () => data.edits || {},
-    setEdits(e) { data.edits = e; save(); },
     getSel: (year) => (data.sel && data.sel[year]) || null,
     setSel(year, sel) { (data.sel = data.sel || {})[year] = sel; save(); },
     setMuted(m) { data.muted = !!m; save(); },

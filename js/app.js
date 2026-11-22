@@ -57,8 +57,7 @@
     return h('header', { class: 'topbar' },
       back ? h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { EG.sound('click'); back(); } }, '← Zurück') : h('span'),
       h('h1', {}, title),
-      h('div', { class: 'topbar-right' }, extra, muteButton(),
-        h('button', { class: 'btn-icon', type: 'button', 'aria-label': 'Einstellungen', title: 'Einstellungen', onclick: showSettings }, '⚙️')),
+      h('div', { class: 'topbar-right' }, app.teacher ? h('span', { class: 'chip chip-teacher' }, '🧑‍🏫 Lehrkraft-Modus') : null, extra, muteButton(), settingsButton()),
     );
   }
 
@@ -168,56 +167,76 @@
     render();
   }
 
-  // ---------- Änderungen an Wörtern (Deutsch, Emoji, Niveau) ----------
-  // Sie liegen im Browser (localStorage) und werden beim Start auf die Wortlisten gelegt, gelten also in allen Spielen.
-  const EDITABLE = ['de', 'emoji', 'level'];
+  // ---------- Lehrkraft-Modus (nur mit lokalem Server: tools/lehrkraft.py) ----------
+  // Ohne den Server (z. B. GitHub Pages) ist die App im Schüler-Modus: Wortliste nur lesbar, Einstellungen mit PIN.
+  const app = { teacher: false, undo: 0 };
+  const api = (path, body) => fetch(path, { method: body ? 'POST' : 'GET', cache: 'no-store',
+    headers: { 'X-EG': '1', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+    .then((r) => r.json().catch(() => ({})).then((j) => { if (!r.ok || j.error) throw new Error(j.error || 'Fehler ' + r.status); return j; }));
+  const FIELDS = ['de', 'emoji', 'level'];
   const findWord = (unitId, en) => { const u = EG.units.find((x) => x.id === unitId); return u && u.words.find((w) => w.en === en); };
-  const isChanged = (w) => !!w._orig && EDITABLE.some((f) => w[f] !== w._orig[f]);
-  const editKey = (unitId, en) => unitId + '|' + en;
-  function persistEdit(unitId, w) {
-    const edits = EG.store.getEdits(), k = editKey(unitId, w.en);
-    if (isChanged(w)) edits[k] = { de: w.de, emoji: w.emoji, level: w.level }; else delete edits[k];
-    EG.store.setEdits(edits);
-  }
-  function initEdits() {
+  const isChanged = (w) => !!w._orig && FIELDS.some((f) => w[f] !== w._orig[f]);
+
+  async function detectMode() {
     EG.units.forEach((u) => u.words.forEach((w) => { w._orig = { de: w.de, emoji: w.emoji, level: w.level }; }));
-    const edits = EG.store.getEdits(), keep = {};
-    for (const [k, patch] of Object.entries(edits)) {
-      const i = k.indexOf('|'), w = findWord(k.slice(0, i), k.slice(i + 1));
-      if (!w) continue;                                   // Wort gibt es nicht mehr
-      EDITABLE.forEach((f) => { if (patch[f] != null) w[f] = patch[f]; });
-      if (isChanged(w)) keep[k] = patch;                  // schon eingebaute Änderungen fallen weg
-    }
-    EG.store.setEdits(keep);
+    try {
+      const r = await fetch('/api/ping', { cache: 'no-store', headers: { 'X-EG': '1' } });
+      if (!r.ok || !(await r.json()).teacher) return;
+      const c = await api('/api/changes');
+      c.changes.forEach((ch) => { const w = findWord(ch.unit, ch.en); if (w) w._orig = ch.original; }); // Stand des letzten Commits
+      app.teacher = true; app.undo = c.undo;
+    } catch (e) { /* kein lokaler Server: Schüler-Modus */ }
   }
-  const editCount = () => Object.keys(EG.store.getEdits()).length;
 
-  function download(name, text) {
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-    const a = h('a', { href: url, download: name });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  function exportEdits() {
-    const changes = [];
-    EG.units.forEach((u) => u.words.filter(isChanged).forEach((w) => changes.push({
-      year: u.year, unit: u.id, en: w.en, de: w.de, emoji: w.emoji, level: w.level, original: { ...w._orig } })));
-    const day = new Date().toISOString().slice(0, 10);
-    download(`english-games-aenderungen-${day}.json`, JSON.stringify({ app: 'english-games', version: 1, exported: day, changes }, null, 2));
-  }
-  function confirmBox(text, yesLabel, onYes) {
-    const close = () => box.remove();
-    const box = h('div', { class: 'overlay', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': text },
-      h('div', { class: 'card dialog' }, h('p', {}, '⚠️ ' + text),
-        h('div', { class: 'row' },
-          h('button', { class: 'btn btn-big', type: 'button', onclick: () => { close(); onYes(); } }, yesLabel),
-          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: close }, 'Abbrechen'))));
+  function overlay(...kids) {
+    const box = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true' }, h('div', { class: 'card dialog' }, kids));
+    box.close = () => box.remove();
     root.append(box);
-    box.querySelector('button:last-child').focus();
+    return box;
+  }
+  const notice = (text) => { const o = overlay(h('p', {}, '🔒 ' + text), h('button', { class: 'btn btn-big', type: 'button', onclick: () => o.close() }, 'OK')); };
+  const clock = (ms) => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+  // Einstellungen im Schüler-Modus: erst nach der PIN
+  function askPin() {
+    if (!EG.lock.hasPin()) return notice('Die Einstellungen sind gesperrt. Es ist noch keine PIN festgelegt.');
+    if (EG.lock.lockedUntil()) return notice(`Zu viele falsche Eingaben. Gesperrt bis ${clock(EG.lock.lockedUntil())} Uhr.`);
+    const msg = h('p', { class: 'dlg-msg', role: 'alert' });
+    const input = h('input', { class: 'edit pin-input', type: 'password', inputmode: 'numeric', pattern: '[0-9]*', maxlength: '4',
+      autocomplete: 'off', 'aria-label': 'PIN mit 4 Ziffern' });
+    const o = overlay(h('p', {}, '🔒 Bitte PIN eingeben'),
+      h('form', { class: 'pin-form', onsubmit: (e) => {
+        e.preventDefault();
+        const res = EG.lock.verify(input.value);
+        input.value = '';
+        if (res.ok) { o.close(); showSettings(); return; }
+        EG.sound('wrong');
+        if (res.locked) { o.close(); notice(`Zu viele falsche Eingaben. Gesperrt bis ${clock(res.until)} Uhr.`); return; }
+        msg.textContent = `✗ Falsche PIN. Noch ${res.left} Versuch(e).`;
+        input.focus();
+      } }, input,
+        h('div', { class: 'row' },
+          h('button', { class: 'btn btn-big', type: 'submit' }, 'OK'),
+          h('button', { class: 'btn btn-plain btn-big', type: 'button', onclick: () => o.close() }, 'Abbrechen'))),
+      msg);
+    input.focus();
   }
 
-  // Wortliste: alle ausgewählten Wörter als Tabelle, filter- und sortierbar; Deutsch, Emoji, Niveau sind bearbeitbar
+  // Zahnrad (Lehrkraft) oder Schloss (Schüler): 5× schnell tippen öffnet die PIN-Abfrage
+  function settingsButton() {
+    if (app.teacher) return h('button', { class: 'btn-icon', type: 'button', 'aria-label': 'Einstellungen', title: 'Einstellungen', onclick: showSettings }, '⚙️');
+    let taps = [];
+    return h('button', { class: 'btn-icon', type: 'button', 'aria-label': 'Gesperrt', title: 'Gesperrt', onclick: () => {
+      const now = Date.now();
+      taps = taps.filter((t) => now - t < 3000).concat(now);
+      if (taps.length >= 5) { taps = []; askPin(); }
+    } }, '🔒');
+  }
+
+  // Wortliste: alle ausgewählten Wörter als Tabelle, filter- und sortierbar.
+  // Lehrkraft-Modus: Deutsch, Emoji und Niveau direkt änderbar (wird sofort in die Vokabeldatei geschrieben).
   function showWords() {
+    const editable = app.teacher;
     const all = flow.words.map((w, idx) => {
       const unit = EG.units.find((u) => u.id === w.unitId);
       const secs = unit.sections || [];
@@ -229,21 +248,27 @@
     let sort = { key: null, dir: 1 };
     const body = h('div', { class: 'wl' });
     const metaEl = h('div', { class: 'wl-count' });
+    const errEl = h('p', { class: 'verdict v-trick', role: 'alert', hidden: true });
     const tableBox = h('div', { class: 'card wl-wrap' });
-    const exportBtn = h('button', { class: 'btn', type: 'button', onclick: exportEdits }, '⬇ Änderungen exportieren');
-    const discardBtn = h('button', { class: 'btn btn-plain', type: 'button', onclick: () => confirmBox(
-      `Alle ${editCount()} Änderungen verwerfen? Das kann nicht rückgängig gemacht werden.`, 'Ja, verwerfen', () => {
-        EG.units.forEach((u) => u.words.forEach((w) => { if (w._orig) Object.assign(w, w._orig); }));
-        EG.store.setEdits({});
-        all.forEach((r) => Object.assign(r, r._orig));
-        render();
-      }) }, '🗑 Änderungen verwerfen');
+    const shown = h('div', { class: 'hint-line' });
+    const filters = h('div', { class: 'wl-filters' });
+    const undoBtn = h('button', { class: 'btn', type: 'button', onclick: async () => {
+      try {
+        const res = await api('/api/undo', {});
+        const src = findWord(res.unit, res.en);
+        Object.assign(src, res.current);
+        const row = all.find((r) => r.unitId === res.unit && r.en === res.en);
+        if (row) Object.assign(row, res.current);
+        app.undo = res.undo; errEl.hidden = true; EG.sound('click'); render();
+      } catch (e) { fail(e); }
+    } }, '↶ Änderungen rückgängig');
+    const fail = (e) => { errEl.textContent = '✗ Nicht gespeichert: ' + e.message + ' – läuft der Lehrkraft-Server noch?'; errEl.hidden = false; EG.sound('wrong'); };
 
     const COLS = [
-      { key: 'chg', label: '✎', nosort: true, title: 'Geändert' },
+      editable && { key: 'chg', label: '✎', nosort: true, title: 'Geändert' },
       { key: 'en', label: 'Englisch' }, { key: 'de', label: 'Deutsch' }, { key: 'emoji', label: 'Emoji' },
       { key: 'level', label: 'Niveau' }, { key: 'unitIdx', label: 'Unit' }, { key: 'secIdx', label: 'Abschnitt' },
-    ];
+    ].filter(Boolean);
     const cmp = (a, b) => {
       const k = sort.key;
       const r = (k === 'en' || k === 'de') ? a[k].localeCompare(b[k], k === 'de' ? 'de' : 'en', { sensitivity: 'base' })
@@ -259,37 +284,56 @@
     }
 
     function refreshMeta() {
-      const n = editCount();
-      metaEl.textContent = `🔤 ${all.length} Wörter ausgewählt` + (n ? ` · ✎ ${n} geändert` : '');
-      exportBtn.disabled = discardBtn.disabled = !n;
+      const n = EG.units.reduce((sum, u) => sum + u.words.filter(isChanged).length, 0);
+      metaEl.textContent = `🔤 ${all.length} Wörter ausgewählt` + (editable && n ? ` · ✎ ${n} geändert (noch nicht veröffentlicht)` : '');
+      undoBtn.disabled = !app.undo;
     }
 
     function rowEl(w) {
       const src = findWord(w.unitId, w.en);
+      if (!editable) {
+        return h('tr', {},
+          h('td', {}, h('button', { class: 'say', type: 'button', 'aria-label': 'Vorlesen: ' + w.en, onclick: () => EG.speak(w.en) },
+            h('span', { 'aria-hidden': 'true' }, '🔊 '), w.en)),
+          h('td', {}, w.de), h('td', { class: 'wl-emoji' }, w.emoji),
+          h('td', {}, h('span', { class: 'lvl lvl-' + w.level }, 'N' + w.level)),
+          h('td', {}, w.unitTitle), h('td', {}, w.secName));
+      }
       const mark = h('td', { class: 'wl-chg' });
       const tr = h('tr', {}, mark);
       const refresh = () => {
-        const ch = isChanged(w);
+        const ch = isChanged(src);
         tr.classList.toggle('changed', ch);
         mark.textContent = ch ? '✎' : '';
         mark.title = ch ? 'Geändert' : '';
         mark.setAttribute('aria-label', ch ? 'Geändert' : '');
       };
-      const save = (field, value) => { src[field] = value; w[field] = value; persistEdit(w.unitId, src); refresh(); refreshMeta(); };
+      const save = async (field, value, revert) => {
+        if (value === src[field]) return;
+        try {
+          const res = await api('/api/edit', { unit: w.unitId, en: w.en, [field]: value });
+          Object.assign(src, res.current); Object.assign(w, res.current);
+          app.undo = res.undo; errEl.hidden = true;
+          refresh(); refreshMeta();
+        } catch (e) { revert(); fail(e); }
+      };
       const text = (field, cls, label) => {
         const inp = h('input', { class: 'edit ' + cls, type: 'text', 'aria-label': `${label} zu ${w.en}`, autocomplete: 'off', spellcheck: 'false' });
         inp.value = w[field];
         inp.addEventListener('change', () => {
           const v = inp.value.trim();
-          if (!v) inp.value = w._orig[field]; // leer geht nicht: ursprünglichen Wert zurück
-          save(field, v || w._orig[field]);
+          if (!v) { inp.value = src[field]; return; }      // leer geht nicht: Wert bleibt
+          save(field, v, () => (inp.value = src[field]));
         });
         return inp;
       };
       const lvl = h('select', { class: 'edit lvl-sel lvl-' + w.level, 'aria-label': 'Niveau zu ' + w.en },
         EG.levels.map((l) => h('option', { value: l.id }, l.name)));
       lvl.value = w.level;
-      lvl.addEventListener('change', () => { lvl.className = 'edit lvl-sel lvl-' + lvl.value; save('level', +lvl.value); });
+      lvl.addEventListener('change', () => {
+        lvl.className = 'edit lvl-sel lvl-' + lvl.value;
+        save('level', +lvl.value, () => { lvl.value = src.level; lvl.className = 'edit lvl-sel lvl-' + src.level; });
+      });
 
       tr.append(
         h('td', {}, h('button', { class: 'say', type: 'button', 'aria-label': 'Vorlesen: ' + w.en, onclick: () => EG.speak(w.en) },
@@ -337,12 +381,13 @@
         select('Abschnitt', f.section, secOpts, (v) => (f.section = v)),
         h('button', { class: 'btn btn-plain', type: 'button', onclick: () => { f.level = f.unit = f.section = ''; sort = { key: null, dir: 1 }; render(); } }, '↺ Filter zurücksetzen'));
     }
-    const shown = h('div', { class: 'hint-line' });
-    const filters = h('div', { class: 'wl-filters' });
 
-    body.append(metaEl,
-      h('p', { class: 'hint-line' }, '✏️ Deutsch, Emoji und Niveau kannst du direkt ändern (Felder mit Rahmen). Englisch, Unit und Abschnitt sind gesperrt. Änderungen gelten sofort in allen Spielen und werden in diesem Browser gespeichert.'),
-      h('div', { class: 'wl-filters' }, exportBtn, discardBtn), filters, shown, tableBox);
+    body.append(...[metaEl,
+      editable
+        ? h('p', { class: 'hint-line' }, '✏️ Deutsch, Emoji und Niveau kannst du direkt ändern (Felder mit Rahmen). Englisch, Unit und Abschnitt sind gesperrt. Jede Änderung wird sofort in die Vokabeldatei geschrieben und gilt in allen Spielen. ✎ = noch nicht veröffentlicht.')
+        : null,
+      editable ? h('div', { class: 'wl-filters' }, undoBtn) : null,
+      errEl, filters, shown, tableBox].filter(Boolean));
 
     screen(topbar({ title: '📋 Wortliste', back: showSelect }), crumbs(), body);
     render();
@@ -396,6 +441,23 @@
     flow.game.mount(ctx);
   }
 
+  // Nur Lehrkraft-Modus: PIN für den Schüler-Modus festlegen (wird als Hash in data/pin.js gespeichert)
+  function pinCard() {
+    const msg = h('p', { class: 'hint-line', role: 'status' }, EG.lock.hasPin() ? '✓ Es ist eine PIN festgelegt.' : '⚠️ Noch keine PIN festgelegt – im Schüler-Modus bleiben die Einstellungen dann gesperrt.');
+    const input = h('input', { class: 'edit pin-input', type: 'password', inputmode: 'numeric', pattern: '[0-9]*', maxlength: '4', autocomplete: 'off', 'aria-label': 'Neue PIN mit 4 Ziffern' });
+    return h('div', { class: 'card pin-card' },
+      h('h2', { class: 'step' }, '🔒 PIN für den Schüler-Modus'),
+      h('form', { class: 'pin-form', onsubmit: async (e) => {
+        e.preventDefault();
+        try {
+          await api('/api/pin', { pin: input.value });
+          input.value = '';
+          msg.textContent = '✓ PIN gespeichert in data/pin.js. Zum Veröffentlichen bitte committen und pushen.';
+        } catch (err) { msg.textContent = '✗ ' + err.message; }
+      } }, input, h('button', { class: 'btn', type: 'submit' }, 'PIN speichern')),
+      msg);
+  }
+
   // Einstellungen: Spiele je Jahrgang an-/abhaken
   function showSettings() {
     const prev = { ...flow };
@@ -403,6 +465,7 @@
     screen(
       topbar({ title: '⚙️ Einstellungen', back }),
       h('p', { class: 'hint-line' }, 'Hake pro Jahrgang an, welche Spiele angezeigt werden. Gespeichert wird nur auf diesem Gerät.'),
+      app.teacher ? pinCard() : null,
       h('div', { class: 'settings card' },
         h('table', {},
           h('thead', {}, h('tr', {}, h('th', {}, 'Spiel'), EG.years.map((y) => h('th', {}, 'Kl. ' + y)))),
@@ -421,6 +484,5 @@
     });
   }
 
-  initEdits();
-  showYears();
+  detectMode().then(showYears);
 })();
