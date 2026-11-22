@@ -32,6 +32,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .deco { position: absolute; top: 0; right: 0; width: 22vw; height: 22vw; max-width: 20rem; max-height: 20rem;
   background: var(--mustard); border-bottom-left-radius: 100%; z-index: 0; opacity: .9; }
 
+/* Höher als die anderen direkten Kinder von .screen (Zeile oben), damit das Sprachmenü (im Topbar verschachtelt) über allem liegt */
+.screen > .topbar { z-index: 5; }
 .topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; margin-bottom: 1rem; }
 .topbar h1 { margin: 0; font-family: var(--head); font-weight: 400; font-size: 2.6rem; letter-spacing: .02em; text-align: center; }
 .topbar-right { display: flex; gap: .6rem; justify-content: flex-end; align-items: center; }

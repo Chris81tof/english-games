@@ -72,7 +72,8 @@
     function open() {
       list = h('div', { class: 'lang-list', role: 'menu', 'aria-label': EG.t('lang.choose') }, EG.availableLanguages().map((l) =>
         h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': String(l.id === info.id), class: l.id === info.id ? 'on' : '',
-          lang: l.id === 'bhs' ? 'sh' : l.id, dir: l.dir || 'ltr', onclick: () => {
+          lang: l.id === 'bhs' ? 'sh' : l.id, onclick: () => {
+            // dir bleibt ltr für die Zeile selbst (Grid-Reihenfolge der Spalten); Arabisch zeigt sich trotzdem korrekt von rechts nach links
             close();
             if (l.id === info.id) return;
             EG.store.setLang(l.id); EG.applyLang(); current();
