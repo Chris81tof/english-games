@@ -441,20 +441,27 @@
     flow.game.mount(ctx);
   }
 
-  // Nur Lehrkraft-Modus: PIN für den Schüler-Modus festlegen (wird als Hash in data/pin.js gespeichert)
+  // Nur Lehrkraft-Modus: PIN für den Schüler-Modus festlegen (wird nur als Hash in data/pin.js gespeichert)
   function pinCard() {
     const msg = h('p', { class: 'hint-line', role: 'status' }, EG.lock.hasPin() ? '✓ Es ist eine PIN festgelegt.' : '⚠️ Noch keine PIN festgelegt – im Schüler-Modus bleiben die Einstellungen dann gesperrt.');
-    const input = h('input', { class: 'edit pin-input', type: 'password', inputmode: 'numeric', pattern: '[0-9]*', maxlength: '4', autocomplete: 'off', 'aria-label': 'Neue PIN mit 4 Ziffern' });
+    const field = (label) => h('input', { class: 'edit pin-input', type: 'password', inputmode: 'numeric', pattern: '[0-9]*', maxlength: '4', autocomplete: 'off', 'aria-label': label, placeholder: '••••' });
+    const first = field('Neue PIN mit 4 Ziffern'), second = field('PIN wiederholen');
     return h('div', { class: 'card pin-card' },
-      h('h2', { class: 'step' }, '🔒 PIN für den Schüler-Modus'),
+      h('h2', { class: 'step' }, '🔒 PIN festlegen (Schüler-Modus)'),
       h('form', { class: 'pin-form', onsubmit: async (e) => {
         e.preventDefault();
+        const clear = () => { first.value = ''; second.value = ''; };
+        if (!/^\d{4}$/.test(first.value)) { msg.textContent = '✗ Die PIN muss aus genau 4 Ziffern bestehen.'; return; }
+        if (first.value !== second.value) { msg.textContent = '✗ Die beiden Eingaben stimmen nicht überein.'; second.value = ''; second.focus(); return; }
         try {
-          await api('/api/pin', { pin: input.value });
-          input.value = '';
-          msg.textContent = '✓ PIN gespeichert in data/pin.js. Zum Veröffentlichen bitte committen und pushen.';
-        } catch (err) { msg.textContent = '✗ ' + err.message; }
-      } }, input, h('button', { class: 'btn', type: 'submit' }, 'PIN speichern')),
+          await api('/api/pin', { pin: first.value });
+          clear();
+          msg.textContent = '✓ PIN gespeichert (nur als Hash in data/pin.js). Zum Veröffentlichen bitte committen und pushen.';
+        } catch (err) { clear(); msg.textContent = '✗ ' + err.message; }
+      } },
+        h('label', { class: 'filter' }, h('span', {}, 'Neue PIN'), first),
+        h('label', { class: 'filter' }, h('span', {}, 'PIN wiederholen'), second),
+        h('button', { class: 'btn', type: 'submit' }, 'PIN speichern')),
       msg);
   }
 
