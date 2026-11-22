@@ -112,3 +112,16 @@ EG.registerUi('ro', {
   "slap.first": "✓ {sym} {name} a fost primul: +1",
   "slap.wrong": "✗ {sym} {name}: greșit, −1 (blocat)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('ro', {
+  "tag.missing": "Privește cu atenție și ține minte!",
+  "wm.hide": "🙈 Ascunde unul!",
+  "wm.reveal": "🔍 Dezvăluie",
+  "wm.q": "❓ Ce lipsește?",
+  "wm.none": "Nu sunt destule cuvinte diferite pentru această clasă.",
+  "tag.scramble": "Litere amestecate – găsește cuvântul!",
+  "ws.none": "Niciun cuvânt pentru această clasă.",
+  "tag.memory": "Întoarce cărțile și găsește cuvântul și imaginea!",
+  "mem.none": "Nu sunt destule cuvinte cu imagini pentru această clasă.",
+});

@@ -112,3 +112,16 @@ EG.registerUi('tr', {
   "slap.first": "✓ {sym} {name} ilk oldu: +1",
   "slap.wrong": "✗ {sym} {name}: yanlış, −1 (kilitli)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('tr', {
+  "tag.missing": "İyi bak ve hatırla!",
+  "wm.hide": "🙈 Birini sakla!",
+  "wm.reveal": "🔍 Cevabı aç",
+  "wm.q": "❓ Ne eksik?",
+  "wm.none": "Bu sınıf için yeterince farklı kelime yok.",
+  "tag.scramble": "Harfler karıştı – kelimeyi bul!",
+  "ws.none": "Bu sınıf için kelime yok.",
+  "tag.memory": "Kartları çevir, kelimeyi ve resmi bul!",
+  "mem.none": "Bu sınıf için resimli yeterli kelime yok.",
+});

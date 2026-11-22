@@ -258,3 +258,33 @@ html[dir=rtl] .say, html[dir=rtl] .clock { direction: ltr; unicode-bidi: isolate
 html[dir=rtl] .deco { right: auto; left: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 100%; }
 html[dir=rtl] .wl-table tr.changed td.wl-chg { border-left: 0; border-right: .35rem solid var(--ink); }
 html[dir=rtl] body { font-family: 'Nunito', 'Geeza Pro', 'Noto Naskh Arabic', 'Segoe UI', system-ui, sans-serif; }
+
+/* What's missing? */
+.wm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 1rem; width: min(60rem, 100%); }
+.wm-card { border: var(--border); border-radius: 1.2rem; background: var(--white); padding: .8rem .4rem; min-height: 8rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; text-align: center;
+  font-weight: 800; box-shadow: 0 .25rem 0 var(--ink); }
+.wm-card .em { font-size: 2.6rem; line-height: 1; }
+.wm-card .word { font-size: 1.1rem; }
+.wm-card .wm-de { font-size: .95rem; font-weight: 600; }
+.wm-card.wm-hidden { background: var(--mustard-soft); }
+.wm-mask { font-size: 2.6rem; }
+.wm-card.wm-found { background: var(--green); }
+
+/* Word scramble */
+.ws-letters { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; }
+.ws-tile { display: grid; place-items: center; width: 3.2rem; height: 3.6rem; border: var(--border); border-radius: .7rem;
+  background: var(--mustard); font-family: var(--head); font-size: 2.2rem; box-shadow: 0 .2rem 0 var(--ink); }
+
+/* Memory */
+.mem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: .8rem; width: min(62rem, 100%); margin: 1rem 0; }
+.mem-card { border: var(--border); border-radius: 1rem; background: var(--blue); min-height: 7rem; display: flex; align-items: center;
+  justify-content: center; text-align: center; padding: .4rem; box-shadow: 0 .25rem 0 var(--ink); font-weight: 800; }
+.mem-card:active:not(:disabled) { transform: translateY(.2rem); box-shadow: 0 .05rem 0 var(--ink); }
+.mem-card.up { background: var(--white); flex-direction: column; gap: .2rem; }
+.mem-card.matched { background: var(--green); opacity: .85; }
+.mem-back { font-size: 2.2rem; }
+.mem-word { font-size: 1.15rem; }
+.mem-emoji { font-size: 2.4rem; line-height: 1; }
+.mem-de { font-size: .9rem; font-weight: 600; }
+.mem-card:disabled { cursor: default; }

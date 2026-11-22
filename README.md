@@ -37,3 +37,10 @@ Oben rechts wählt der Globus die Sprache (Standard: Englisch, britisch). Sie gi
 
 ## Alle Sprachen (Schritt 2)
 Jetzt stehen alle 16 Sprachen aus der Anfrage zur Verfügung: Englisch, Deutsch, Französisch, Spanisch, Italienisch, Türkisch, Kurdisch (Kurmancî), Arabisch, Bulgarisch, Ukrainisch, Russisch, Rumänisch, Polnisch, Griechisch, Bosnisch/Kroatisch/Serbisch, Albanisch. Alle 364 Einträge (Vokabeln, Befehle, Kategorien, Kurzformen) sind in jede Sprache automatisch übersetzt; alle Menütexte ebenso.
+
+## Drei weitere Spiele
+- **What's missing?** – Karten zeigen, eine verdeckt sich, raten was fehlt. Kartenzahl (5/6/7) richtet sich nach dem höchsten gewählten Niveau.
+- **Memory** – Wort- und Bildkarten umdrehen und Paare finden. Bei Spieler/Teams wechselt bei einem Fehlversuch die Seite; bei Ganzer Klasse zählt jeder Treffer für die Klasse.
+- **Word scramble** – Buchstaben eines Wortes sind gemischt, die Lösung wird per Knopf aufgedeckt.
+
+Alle drei nutzen dieselbe Auswahl (Units/Abschnitte/Niveaus) und sind in allen 16 Sprachen verfügbar.

@@ -112,3 +112,16 @@ EG.registerUi('sq', {
   "slap.first": "✓ {sym} {name} ishte i/e pari/a: +1",
   "slap.wrong": "✗ {sym} {name}: gabim, −1 (i kyçur)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('sq', {
+  "tag.missing": "Shiko mirë dhe kujto!",
+  "wm.hide": "🙈 Fshih një!",
+  "wm.reveal": "🔍 Zbulo",
+  "wm.q": "❓ Çfarë mungon?",
+  "wm.none": "Nuk ka fjalë të ndryshme të mjaftueshme për këtë klasë.",
+  "tag.scramble": "Shkronjat janë përzier – gjej fjalën!",
+  "ws.none": "Nuk ka fjalë për këtë klasë.",
+  "tag.memory": "Ktheji kartat dhe gjej fjalën dhe figurën!",
+  "mem.none": "Nuk ka fjalë të mjaftueshme me figura për këtë klasë.",
+});

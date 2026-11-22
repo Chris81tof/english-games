@@ -112,3 +112,16 @@ EG.registerUi('en', {
   "slap.first": "✓ {sym} {name} was first: +1",
   "slap.wrong": "✗ {sym} {name}: wrong, −1 (locked)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('en', {
+  "tag.missing": "Look and remember!",
+  "wm.hide": "🙈 Hide one!",
+  "wm.reveal": "🔍 Reveal",
+  "wm.q": "❓ What's missing?",
+  "wm.none": "Not enough different words for this class.",
+  "tag.scramble": "Letters mixed up – find the word!",
+  "ws.none": "No words for this class.",
+  "tag.memory": "Flip the cards and find word and picture!",
+  "mem.none": "Not enough words with pictures for this class.",
+});

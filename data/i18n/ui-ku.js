@@ -112,3 +112,16 @@ EG.registerUi('ku', {
   "slap.first": "✓ {sym} {name} yekem bû: +1",
   "slap.wrong": "✗ {sym} {name}: şaş, −1 (girtî)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('ku', {
+  "tag.missing": "Baş binêre û bîne bîra xwe!",
+  "wm.hide": "🙈 Yekê veşêre!",
+  "wm.reveal": "🔍 Veke",
+  "wm.q": "❓ Çi kêm e?",
+  "wm.none": "Ji bo vê polê têrî peyvên cuda tune ne.",
+  "tag.scramble": "Tîp tevlihev bûne – peyvê bibîne!",
+  "ws.none": "Ji bo vê polê peyv tune ne.",
+  "tag.memory": "Kartan bizivirîne, peyv û wêneyê bibîne!",
+  "mem.none": "Ji bo vê polê peyvên bi wêne têrê nakin.",
+});

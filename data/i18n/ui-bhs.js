@@ -112,3 +112,16 @@ EG.registerUi('bhs', {
   "slap.first": "✓ {sym} {name} je bio/bila prvi/prva: +1",
   "slap.wrong": "✗ {sym} {name}: pogrešno, −1 (zaključan)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('bhs', {
+  "tag.missing": "Gledaj pažljivo i zapamti!",
+  "wm.hide": "🙈 Sakrij jedno!",
+  "wm.reveal": "🔍 Otkrij",
+  "wm.q": "❓ Šta nedostaje?",
+  "wm.none": "Nema dovoljno različitih riječi za ovaj razred.",
+  "tag.scramble": "Slova pomiješana – nađi riječ!",
+  "ws.none": "Nema riječi za ovaj razred.",
+  "tag.memory": "Okreći karte i pronađi riječ i sliku!",
+  "mem.none": "Nema dovoljno riječi sa slikama za ovaj razred.",
+});

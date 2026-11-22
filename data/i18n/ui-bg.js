@@ -112,3 +112,16 @@ EG.registerUi('bg', {
   "slap.first": "✓ {sym} {name} беше пръв: +1",
   "slap.wrong": "✗ {sym} {name}: грешно, −1 (заключен)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('bg', {
+  "tag.missing": "Гледай внимателно и запомни!",
+  "wm.hide": "🙈 Скрий една!",
+  "wm.reveal": "🔍 Разкрий",
+  "wm.q": "❓ Какво липсва?",
+  "wm.none": "Няма достатъчно различни думи за този клас.",
+  "tag.scramble": "Разбъркани букви – намери думата!",
+  "ws.none": "Няма думи за този клас.",
+  "tag.memory": "Обръщай картите и намери дума и картинка!",
+  "mem.none": "Няма достатъчно думи с картинки за този клас.",
+});

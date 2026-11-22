@@ -112,3 +112,16 @@ EG.registerUi('pl', {
   "slap.first": "✓ {sym} {name} był(a) pierwszy/a: +1",
   "slap.wrong": "✗ {sym} {name}: źle, −1 (zablokowany)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('pl', {
+  "tag.missing": "Patrz uważnie i zapamiętaj!",
+  "wm.hide": "🙈 Ukryj jedno!",
+  "wm.reveal": "🔍 Odkryj",
+  "wm.q": "❓ Czego brakuje?",
+  "wm.none": "Za mało różnych słów dla tej klasy.",
+  "tag.scramble": "Litery pomieszane – znajdź słowo!",
+  "ws.none": "Brak słów dla tej klasy.",
+  "tag.memory": "Odwracaj karty i znajdź słowo i obrazek!",
+  "mem.none": "Za mało słów z obrazkami dla tej klasy.",
+});

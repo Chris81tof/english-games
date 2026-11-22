@@ -112,3 +112,16 @@ EG.registerUi('fr', {
   "slap.first": "✓ {sym} {name} était le/la premier/première : +1",
   "slap.wrong": "✗ {sym} {name} : faux, −1 (bloqué)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('fr', {
+  "tag.missing": "Regarde bien et souviens-toi !",
+  "wm.hide": "🙈 Cacher un !",
+  "wm.reveal": "🔍 Révéler",
+  "wm.q": "❓ Qu'est-ce qui manque ?",
+  "wm.none": "Pas assez de mots différents pour cette classe.",
+  "tag.scramble": "Lettres mélangées – trouve le mot !",
+  "ws.none": "Pas de mots pour cette classe.",
+  "tag.memory": "Retourne les cartes et trouve le mot et l'image !",
+  "mem.none": "Pas assez de mots avec images pour cette classe.",
+});

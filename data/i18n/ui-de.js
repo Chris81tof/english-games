@@ -112,3 +112,16 @@ EG.registerUi('de', {
   "slap.first": "✓ {sym} {name} war zuerst: +1",
   "slap.wrong": "✗ {sym} {name}: falsch, −1 (gesperrt)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('de', {
+  "tag.missing": "Schau genau hin und merk es dir!",
+  "wm.hide": "🙈 Eins verstecken!",
+  "wm.reveal": "🔍 Auflösen",
+  "wm.q": "❓ Was fehlt?",
+  "wm.none": "Zu wenige verschiedene Wörter für diesen Jahrgang.",
+  "tag.scramble": "Buchstaben gemischt – finde das Wort!",
+  "ws.none": "Keine Wörter für diesen Jahrgang.",
+  "tag.memory": "Karten umdrehen, Wort und Bild finden!",
+  "mem.none": "Zu wenige Wörter mit Bildern für diesen Jahrgang.",
+});

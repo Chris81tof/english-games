@@ -112,3 +112,16 @@ EG.registerUi('ar', {
   "slap.first": "✓ {sym} {name} كان الأسرع: +1",
   "slap.wrong": "✗ {sym} {name}: خطأ، −1 (مقفل)",
 });
+
+// Zusätzliche Menütexte für What's missing?, Word scramble, Memory.
+EG.registerUi('ar', {
+  "tag.missing": "انظر جيدًا وتذكّر!",
+  "wm.hide": "🙈 أخفِ واحدة!",
+  "wm.reveal": "🔍 اكشف",
+  "wm.q": "❓ ما الذي ينقص؟",
+  "wm.none": "لا توجد كلمات كافية مختلفة لهذا الصف.",
+  "tag.scramble": "الحروف مختلطة – جد الكلمة!",
+  "ws.none": "لا توجد كلمات لهذا الصف.",
+  "tag.memory": "اقلب البطاقات وابحث عن الكلمة والصورة!",
+  "mem.none": "لا توجد كلمات كافية مع صور لهذا الصف.",
+});
